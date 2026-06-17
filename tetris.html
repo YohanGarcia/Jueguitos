@@ -305,46 +305,7 @@ function sfxGameOver() {
   });
 }
 
-// -- Background music --
-const melody = [
-  330, 330, 0, 330, 0, 262, 330, 0, 392, 0, 0, 0, 196, 0, 0, 0,
-  262, 0, 294, 0, 330, 0, 0, 0, 196, 262, 294, 330, 392, 0, 0, 0,
-  330, 330, 0, 330, 0, 262, 330, 0, 392, 0, 0, 0, 196, 0, 0, 0,
-  262, 0, 294, 0, 330, 0, 0, 0, 392, 330, 294, 262, 0, 0, 0, 0,
-];
-const bass = [
-  131, 0, 0, 0, 110, 0, 0, 0, 131, 0, 0, 0, 98, 0, 0, 0,
-  131, 0, 0, 0, 110, 0, 0, 0, 131, 0, 0, 0, 98, 0, 0, 0,
-  131, 0, 0, 0, 110, 0, 0, 0, 131, 0, 0, 0, 98, 0, 0, 0,
-  131, 0, 0, 0, 110, 0, 0, 0, 131, 0, 0, 0, 98, 0, 0, 0,
-];
-let musicInterval;
-const NOTE_DUR = 0.13;
 
-function startMusic() {
-  if (!actx) return;
-  stopMusic();
-  let step = 0;
-  const t0 = actx.currentTime;
-  function schedule() {
-    if (!actx) return;
-    const now = actx.currentTime;
-    while (t0 + step * NOTE_DUR < now + 0.5) {
-      const idx = step % melody.length;
-      const t = t0 + step * NOTE_DUR;
-      if (melody[idx]) playNote(melody[idx], t, NOTE_DUR * 0.9, 'square', 0.04);
-      if (bass[idx]) playNote(bass[idx], t, NOTE_DUR * 0.9, 'triangle', 0.06);
-      step++;
-      if (step > 5000) { step = 0; } // avoid overflow
-    }
-    musicInterval = setTimeout(schedule, 80);
-  }
-  schedule();
-}
-
-function stopMusic() {
-  if (musicInterval) { clearTimeout(musicInterval); musicInterval = null; }
-}
 
 function initGrid() {
   grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
@@ -364,7 +325,6 @@ function spawn() {
   next = randomPiece();
   if (collides(current.shape, current.x, current.y)) {
     gameOver = true;
-    stopMusic();
     sfxGameOver();
     document.getElementById('gameover').style.display = 'block';
     document.getElementById('restart').style.display = 'block';
@@ -582,7 +542,6 @@ function update(timestamp) {
 function startGame() {
   if (animId) cancelAnimationFrame(animId);
   initAudio();
-  stopMusic();
   initGrid();
   initStars();
   particles = [];
@@ -594,7 +553,6 @@ function startGame() {
   document.getElementById('restart').style.display = 'none';
   updateUI();
   spawn();
-  startMusic();
   dropTimer = performance.now();
   animId = requestAnimationFrame(update);
 }
@@ -631,16 +589,16 @@ setupBtn('tbRotate', () => rotate());
 setupBtn('tbDrop', () => hardDrop());
 
 // Update mobile UI
-const origUpdateUI = updateUI;
-function updateUI() {
-  origUpdateUI();
+const _baseUI = updateUI;
+updateUI = function() {
+  _baseUI();
   const s = document.getElementById('mScore');
   const l = document.getElementById('mLines');
   const lv = document.getElementById('mLevel');
   if (s) s.textContent = score;
   if (l) l.textContent = lines;
   if (lv) lv.textContent = level;
-}
+};
 
 startGame();
 

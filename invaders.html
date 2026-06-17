@@ -137,7 +137,7 @@
   }
   #touchInvaders button:active { background: rgba(255,255,255,0.25); }
   @media (hover: none) and (pointer: coarse) {
-    #touchInvaders { display: flex; }
+    #touchInvaders { display: none; }
     #controls-hint { display: none; }
     canvas { max-width: 98vw; max-height: 75vh; }
     #ui { font-size: 12px; padding: 5px 12px; gap: 10px; }
@@ -675,30 +675,40 @@ document.addEventListener('keyup', e => { keys[e.key] = false; });
 document.getElementById('restart').addEventListener('click', startGame);
 document.addEventListener('click', initAudio, { once: true });
 
-// Touch controls
-let touchLeft = false, touchRight = false;
-function setupInvBtn(id, dir) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  function down(e) { e.preventDefault(); initAudio(); if (dir === 'left') touchLeft = true; else touchRight = true; }
-  function up(e) { e.preventDefault(); if (dir === 'left') touchLeft = false; else touchRight = false; }
-  el.addEventListener('touchstart', down, { passive: false });
-  el.addEventListener('touchend', up, { passive: false });
-  el.addEventListener('touchcancel', up, { passive: false });
-  el.addEventListener('mousedown', down);
-  el.addEventListener('mouseup', up);
-  el.addEventListener('mouseleave', up);
-}
-setupInvBtn('tiLeft', 'left');
-setupInvBtn('tiRight', 'right');
+// Touch controls — move player toward touch X
+let touchTargetX = null;
+let touchActive = false;
+canvas.addEventListener('touchstart', e => {
+  initAudio();
+  touchActive = true;
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  touchTargetX = (t.clientX - rect.left) * scaleX;
+  if (gameOver) startGame();
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!touchActive) return;
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  touchTargetX = (t.clientX - rect.left) * scaleX;
+}, { passive: true });
+canvas.addEventListener('touchend', e => { touchActive = false; touchTargetX = null; }, { passive: true });
 
 // inject touch into update
-const _origUpdate = update;
-function update() {
-  if (touchLeft) keys['ArrowLeft'] = true; else delete keys['ArrowLeft'];
-  if (touchRight) keys['ArrowRight'] = true; else delete keys['ArrowRight'];
-  _origUpdate();
-}
+const _baseUpdate = update;
+update = function() {
+  if (touchActive && touchTargetX !== null) {
+    const diff = touchTargetX - player.x;
+    const spd = getMoveSpeed();
+    if (Math.abs(diff) > 5) {
+      player.x += Math.sign(diff) * Math.min(spd, Math.abs(diff));
+      player.x = Math.max(25, Math.min(W - 25, player.x));
+    }
+  }
+  _baseUpdate();
+};
 
 startGame();
 </script>

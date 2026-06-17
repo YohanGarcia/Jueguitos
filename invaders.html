@@ -513,7 +513,9 @@ function showGameOver() {
   document.getElementById('goSub').textContent = lives <= 0 ? 'los aliens ganaron' : 'los aliens llegaron';
   document.getElementById('gameover').style.display = 'block';
   document.getElementById('restart').style.display = 'block';
-  document.getElementById('finalScore').textContent = `${score} pts · ronda ${level}`;
+  const ib = Math.max(score, parseInt(localStorage.getItem('invadersBest') || '0', 10));
+  localStorage.setItem('invadersBest', ib.toString());
+  document.getElementById('finalScore').textContent = `${score} pts · récord ${ib}`;
 }
 
 function draw() {

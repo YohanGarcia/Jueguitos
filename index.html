@@ -3,94 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎮 jueguitos</title>
+<title>Jueguitos — arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #07070f;
+    --bg2: #0d0d1a;
+    --card: #11111f;
+    --card-hi: #16162a;
+    --line: rgba(255,255,255,0.07);
+    --line-hi: rgba(255,255,255,0.16);
+    --txt: #f4f4fb;
+    --mut: #8a8aa3;
+    --mut2: #5b5b72;
+    --gold: #ffcb52;
+  }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    background: #0a0a1a;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    overflow: hidden;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #14142a 0%, rgba(20,20,42,0) 60%),
+      var(--bg);
+    color: var(--txt);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  #menu { text-align: center; color: #fff; }
-  #menu h1 {
-    font-size: 52px;
-    margin-bottom: 6px;
-    background: linear-gradient(90deg, #f0c, #0ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  ::selection { background: var(--gold); color: #07070f; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: clamp(28px, 6vw, 80px) clamp(18px, 4vw, 40px) 60px; }
+
+  /* ---- Hero ---- */
+  header { position: relative; margin-bottom: clamp(34px, 6vw, 60px); }
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--mut); display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
   }
-  #menu p { opacity: 0.35; margin-bottom: 44px; font-size: 15px; }
-  .games { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
-  .game-btn {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 32px 44px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    min-width: 200px;
+  .eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--mut2); }
+  .blink { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); animation: blink 1.4s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  h1 {
+    font-size: clamp(54px, 13vw, 132px);
+    font-weight: 700; line-height: 0.9; letter-spacing: -0.04em;
+    text-transform: uppercase;
   }
-  .game-btn:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.25);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(100,100,255,0.2);
+  h1 .o { color: var(--gold); }
+  .tagline { color: var(--mut); font-size: clamp(15px, 2.2vw, 19px); margin-top: 16px; max-width: 460px; line-height: 1.5; }
+
+  /* ---- Stats ---- */
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--line); border: 1px solid var(--line);
+    border-radius: 16px; overflow: hidden; margin-top: clamp(30px, 5vw, 46px);
   }
-  .game-btn .icon { font-size: 52px; }
-  .game-btn .name { font-size: 20px; font-weight: 700; color: #fff; }
-  .game-btn .desc { font-size: 13px; opacity: 0.45; }
+  .stat { background: var(--bg2); padding: 20px clamp(16px, 3vw, 28px); }
+  .stat .n { font-family: 'Space Mono', monospace; font-size: clamp(26px, 4vw, 40px); font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .stat .n.gold { color: var(--gold); }
+  .stat .l { font-size: 12px; letter-spacing: 0.06em; color: var(--mut); margin-top: 8px; text-transform: uppercase; }
+
+  /* ---- Section label ---- */
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: clamp(40px, 6vw, 64px) 0 22px; gap: 16px; }
+  .sec-head h2 { font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  .sec-head .count { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--mut2); }
+
+  /* ---- Grid ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; }
+  .card {
+    --a: #ffcb52;
+    position: relative; display: flex; flex-direction: column;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 22px; text-decoration: none; color: inherit; overflow: hidden;
+    transition: transform .22s cubic-bezier(.2,.7,.3,1), border-color .22s, background .22s;
+    min-height: 184px;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(420px 180px at 80% -40%, color-mix(in srgb, var(--a) 22%, transparent), transparent 70%);
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  .card:hover { transform: translateY(-5px); background: var(--card-hi); border-color: var(--line-hi); }
+  .card:hover::before { opacity: 1; }
+  .card.soon { cursor: default; }
+
+  .card .top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: auto; }
+  .icon {
+    width: 52px; height: 52px; border-radius: 13px; display: grid; place-items: center;
+    font-size: 27px; line-height: 1;
+    background: color-mix(in srgb, var(--a) 14%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--a) 30%, transparent);
+    box-shadow: inset 0 0 18px color-mix(in srgb, var(--a) 12%, transparent);
+  }
+  .tag {
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 999px; color: var(--a);
+    background: color-mix(in srgb, var(--a) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--a) 28%, transparent);
+  }
+  .tag.new { color: #07070f; background: var(--a); border-color: var(--a); }
+
+  .card h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; margin-top: 18px; }
+  .card p { color: var(--mut); font-size: 13.5px; line-height: 1.45; margin-top: 5px; text-wrap: pretty; }
+
+  .best {
+    display: flex; align-items: center; gap: 7px; margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid var(--line);
+    font-family: 'Space Mono', monospace; font-size: 12.5px; color: var(--mut);
+  }
+  .best .lbl { color: var(--mut2); letter-spacing: 0.05em; text-transform: uppercase; font-size: 10px; }
+  .best .v { color: var(--a); font-weight: 700; margin-left: auto; }
+  .best .v.empty { color: var(--mut2); }
+
+  .play {
+    position: absolute; right: 20px; bottom: 20px; width: 30px; height: 30px;
+    display: grid; place-items: center; border-radius: 50%;
+    border: 1px solid var(--line-hi); color: var(--a);
+    opacity: 0; transform: translateX(-6px); transition: opacity .22s, transform .22s;
+    font-size: 13px;
+  }
+  .card:hover .play { opacity: 1; transform: translateX(0); }
+
+  /* ---- Footer ---- */
+  footer {
+    margin-top: clamp(50px, 8vw, 80px); padding-top: 28px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+    color: var(--mut2); font-size: 13px;
+  }
+  footer a { color: var(--mut); text-decoration: none; transition: color .18s; }
+  footer a:hover { color: var(--txt); }
+  footer .repo { display: inline-flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; }
+  footer .repo svg { width: 16px; height: 16px; fill: currentColor; }
+  footer .lic { font-family: 'Space Mono', monospace; letter-spacing: 0.04em; }
+
+  @media (max-width: 540px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stats .stat:last-child { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
-<div id="menu">
-  <h1>🎮 jueguitos</h1>
-  <p>elegí y empezá a jugar</p>
-  <div class="games">
-    <a class="game-btn" href="circulos.html">
-      <div class="icon">🔫</div>
-      <div class="name">Destructor de Círculos</div>
-      <div class="desc">Explotá círculos, esquivá bombas, subí de nivel</div>
-    </a>
-    <a class="game-btn" href="flappy.html">
-      <div class="icon">🐦</div>
-      <div class="name">Flappy Bird</div>
-      <div class="desc">Volá esquivando tuberías</div>
-    </a>
-    <a class="game-btn" href="pacman.html">
-      <div class="icon">👾</div>
-      <div class="name">Pac-Man</div>
-      <div class="desc">Comé puntos, esquivá fantasmas</div>
-    </a>
-    <a class="game-btn" href="snake.html">
-      <div class="icon">🐍</div>
-      <div class="name">Snake</div>
-      <div class="desc">Comé y crecé sin chocarte</div>
-    </a>
-    <a class="game-btn" href="tetris.html">
-      <div class="icon">🧱</div>
-      <div class="name">Tetris</div>
-      <div class="desc">Armá líneas, no te apiles</div>
-    </a>
-    <a class="game-btn" href="pong.html">
-      <div class="icon">🏓</div>
-      <div class="name">Pong</div>
-      <div class="desc">Paletazo contra la IA</div>
-    </a>
-    <a class="game-btn" href="invaders.html">
-      <div class="icon">👾</div>
-      <div class="name">Space Invaders</div>
-      <div class="desc">Defendé la tierra de los aliens</div>
-    </a>
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><span class="blink"></span> colección arcade · sin instalar nada</div>
+    <h1>Juegu<span class="o">i</span>tos</h1>
+    <p class="tagline">Diez clásicos hechos a mano en HTML puro. Elegí uno, batí tu récord, repetí.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="n" id="st-games">9</div><div class="l">juegos</div></div>
+      <div class="stat"><div class="n gold" id="st-total">0</div><div class="l">puntos acumulados</div></div>
+      <div class="stat"><div class="n" id="st-records">0</div><div class="l">récords logrados</div></div>
+    </div>
+  </header>
+
+  <div class="sec-head">
+    <h2>Elegí tu juego</h2>
+    <span class="count" id="sec-count">09 títulos</span>
   </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <a class="repo" href="https://github.com/YohanGarcia/Jueguitos" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      YohanGarcia/Jueguitos
+    </a>
+    <span class="lic">© 2026 · Licencia MIT · hecho con ☕ y JavaScript</span>
+  </footer>
 </div>
+
+<script>
+  const GAMES = [
+    { file: 'circulos.html', icon: '🎯', name: 'Destructor de Círculos', desc: 'Explotá círculos, esquivá bombas, encadená combos.', a: '#ff2ec4', key: 'circulosBest', fmt: 'pts' },
+    { file: 'flappy.html',   icon: '🐦', name: 'Flappy',                desc: 'Volá entre tuberías sin rozar ni una.',          a: '#2ee6a0', key: 'flappyBest',   fmt: 'pts' },
+    { file: 'pacman.html',   icon: '🟡', name: 'Pac-Man',               desc: 'Comé puntos, cazá fantasmas, agarrá la fruta.',  a: '#ffd23e', key: 'pacmanHigh',   fmt: 'pts', tag: 'mejorado' },
+    { file: 'snake.html',    icon: '🐍', name: 'Snake',                 desc: 'Comé y crecé sin morderte la cola.',            a: '#7ee63e', key: 'snakeBest',    fmt: 'pts' },
+    { file: 'tetris.html',   icon: '🧱', name: 'Tetris',                desc: 'Armá líneas, controlá la caída, no te apiles.',  a: '#34c6ff', key: 'tetrisBest',   fmt: 'pts' },
+    { file: 'pong.html',     icon: '🏓', name: 'Pong',                  desc: 'Paletazo contra una IA que no perdona.',         a: '#5ee6c8', key: 'pongWins',     fmt: 'wins' },
+    { file: 'invaders.html', icon: '👾', name: 'Space Invaders',        desc: 'Defendé la tierra de la invasión alienígena.',   a: '#5ee65e', key: 'invadersBest', fmt: 'pts' },
+    { file: 'breakout.html', icon: '🧊', name: 'Breakout',              desc: 'Rebote, rompé los ladrillos, agarrá power-ups.', a: '#ff7a3e', key: 'breakoutBest', fmt: 'pts', tag: 'nuevo' },
+    { file: '2048.html',     icon: '🔢', name: '2048',                  desc: 'Deslizá, fusioná números, llegá a la gran ficha.', a: '#f2b53e', key: 'g2048Best',  fmt: 'score', tag: 'nuevo' },
+    { file: 'asteroids.html',icon: '🚀', name: 'Asteroids',             desc: 'Girá, empujá y rompé asteroides en pedazos.',   a: '#9d7bff', key: 'asteroidsBest', fmt: 'pts', tag: 'nuevo' },
+  ];
+
+  function fmt(n, kind) {
+    if (kind === 'wins') return n === 1 ? '1 victoria' : n + ' victorias';
+    return n.toLocaleString('es');
+  }
+
+  const grid = document.getElementById('grid');
+  let total = 0, records = 0;
+
+  for (const g of GAMES) {
+    const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
+    if (g.fmt !== 'wins') total += raw;
+    if (raw > 0) records++;
+
+    const tagHtml = g.tag
+      ? `<span class="tag ${g.tag === 'nuevo' ? 'new' : ''}">${g.tag}</span>`
+      : '';
+    const bestVal = raw > 0
+      ? `<span class="v">${fmt(raw, g.fmt)}</span>`
+      : `<span class="v empty">sin marca</span>`;
+    const bestLbl = g.fmt === 'wins' ? 'récord' : 'tu récord';
+
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = g.file;
+    a.style.setProperty('--a', g.a);
+    a.innerHTML = `
+      <div class="top">
+        <div class="icon">${g.icon}</div>
+        ${tagHtml}
+      </div>
+      <h3>${g.name}</h3>
+      <p>${g.desc}</p>
+      <div class="best"><span class="lbl">${bestLbl}</span> ${bestVal}</div>
+      <div class="play">▶</div>`;
+    grid.appendChild(a);
+  }
+
+  const animate = (el, to, kind) => {
+    const dur = 900, t0 = performance.now();
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 3);
+      el.textContent = kind === 'plain' ? Math.round(to * e) : Math.round(to * e).toLocaleString('es');
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  document.getElementById('st-games').textContent = GAMES.length;
+  document.getElementById('sec-count').textContent = String(GAMES.length).padStart(2, '0') + ' títulos';
+  animate(document.getElementById('st-total'), total);
+  animate(document.getElementById('st-records'), records, 'plain');
+</script>
 </body>
 </html>

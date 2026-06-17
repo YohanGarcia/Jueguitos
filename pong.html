@@ -318,8 +318,10 @@ function checkWin() {
   updateUI();
   if (playerScore >= WIN_SCORE) {
     gameOver = true;
+    const w = parseInt(localStorage.getItem('pongWins') || '0', 10) + 1;
+    localStorage.setItem('pongWins', w.toString());
     document.getElementById('winner').textContent = '🎉 GANASTE';
-    document.getElementById('subtext').textContent = '✨ imbatible ✨';
+    document.getElementById('subtext').textContent = `✨ victoria #${w} · imbatible ✨`;
     document.getElementById('gameover').style.display = 'block';
     document.getElementById('restart').style.display = 'block';
     sfxWin();

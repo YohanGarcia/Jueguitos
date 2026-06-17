@@ -190,7 +190,7 @@
     </div>
     <div id="gameover">
       <h1>GAME OVER</h1>
-      <p>se acabó</p>
+      <p id="goMsg">se acabó</p>
       <button id="restart">🔄 jugar de nuevo</button>
     </div>
   </div>
@@ -326,6 +326,9 @@ function spawn() {
   if (collides(current.shape, current.x, current.y)) {
     gameOver = true;
     sfxGameOver();
+    const tb = Math.max(score, parseInt(localStorage.getItem('tetrisBest') || '0', 10));
+    localStorage.setItem('tetrisBest', tb.toString());
+    const gm = document.getElementById('goMsg'); if (gm) gm.textContent = `${score} pts · récord ${tb}`;
     document.getElementById('gameover').style.display = 'block';
     document.getElementById('restart').style.display = 'block';
   }

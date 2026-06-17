@@ -388,6 +388,8 @@
   function endGame() {
     gameRunning = false;
     sfxDeath();
+    const best = Math.max(score, parseInt(localStorage.getItem('circulosBest') || '0', 10));
+    localStorage.setItem('circulosBest', best.toString());
     combo = 0;
     comboEl.textContent = '0x';
     gameoverEl.style.display = 'block';
@@ -395,7 +397,7 @@
     finalLevelEl.textContent = level;
     const ranks = ['novato', 'tirador', 'experto', 'maestro', 'leyenda', 'dios'];
     const rankIdx = Math.min(5, Math.floor(level / 4));
-    rankEl.textContent = `rango: ${ranks[rankIdx]}`;
+    rankEl.textContent = `rango: ${ranks[rankIdx]} · mejor: ${best}`;
     restartBtn.style.display = 'block';
   }
 
@@ -407,7 +409,7 @@
         e.preventDefault();
       }
     }
-    if (e.key === 'Escape') window.location.href = 'juegos.html';
+    if (e.key === 'Escape') window.location.href = 'index.html';
   });
 
   document.addEventListener('click', initAudio, { once: true });

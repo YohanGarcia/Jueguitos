@@ -141,6 +141,43 @@
 
   let mouseX = -1, mouseY = -1, hoveredCircle = null;
 
+  // Audio
+  let actx;
+  function initAudio() {
+    if (actx) return;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  function playTone(f, d, t = 'square', v = 0.06) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + d);
+  }
+  function playNote(f, s, d, t = 'square', v = 0.06) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, s);
+    g.gain.exponentialRampToValueAtTime(0.001, s + d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(s); o.stop(s + d);
+  }
+  function sfxPop() { playTone(700, 0.07, 'square', 0.04); }
+  function sfxBomb() { playTone(120, 0.3, 'sawtooth', 0.08); }
+  function sfxHeart() { playTone(500, 0.1, 'triangle', 0.06); setTimeout(() => playTone(700, 0.1, 'triangle', 0.06), 80); }
+  function sfxLevelUp() {
+    if (!actx) return;
+    [440, 554, 659, 880].forEach((f, i) => playNote(f, actx.currentTime + i * 0.1, 0.12, 'square', 0.06));
+  }
+  function sfxDeath() {
+    if (!actx) return;
+    [400, 350, 300, 200, 150].forEach((f, i) => playNote(f, actx.currentTime + i * 0.1, 0.15, 'sawtooth', 0.05));
+  }
+  function sfxCombo() { playTone(900, 0.06, 'square', 0.05); }
+
   function rand(min, max) { return Math.random() * (max - min) + min; }
   function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
 
@@ -350,6 +387,7 @@
 
   function endGame() {
     gameRunning = false;
+    sfxDeath();
     combo = 0;
     comboEl.textContent = '0x';
     gameoverEl.style.display = 'block';
@@ -362,6 +400,7 @@
   }
 
   document.addEventListener('keydown', e => {
+    initAudio();
     if (e.key === 'r' || e.key === 'R' || e.key === ' ') {
       if (!gameRunning || restartBtn.style.display === 'block') {
         restartBtn.click();
@@ -371,7 +410,9 @@
     if (e.key === 'Escape') window.location.href = 'juegos.html';
   });
 
+  document.addEventListener('click', initAudio, { once: true });
   restartBtn.addEventListener('click', () => {
+    initAudio();
     score = 0; lives = 3; combo = 0; maxCombo = 0; level = 1;
     nextLevelScore = 50; levelUpTimer = 0; difficulty = 1;
     circles = []; particles = []; texts = [];
@@ -394,6 +435,7 @@
       levelUpTimer = 50;
       levelEl.textContent = level;
       shakeX = 8; shakeY = 8;
+      sfxLevelUp();
       showText(W / 2, H / 2 - 30, `⬆ NIVEL ${level}`, '#0ff');
       showText(W / 2, H / 2 + 10, `🔥 ${level * 2}x puntos`, '#ff0');
       for (let i = 0; i < 40; i++) {
@@ -597,6 +639,7 @@
       const c = circles[i];
       if (c.contains(mx, my)) {
         if (c.type === TYPES.BOMB) {
+          sfxBomb();
           showParticles(c.x, c.y, 0, 30);
           showText(c.x, c.y, '💥', '#ff3300');
           circles.splice(i, 1);
@@ -609,6 +652,7 @@
         }
 
         if (c.type === TYPES.HEART) {
+          sfxHeart();
           showParticles(c.x, c.y, 120, 20);
           showText(c.x, c.y, '+1 ❤️', '#66ff88');
           circles.splice(i, 1);
@@ -621,6 +665,7 @@
         if (c.hits > 0) {
           c.flashTimer = 6;
           c.hue += 20;
+          sfxPop();
           showParticles(c.x, c.y, c.hue, 6);
           return;
         }
@@ -631,6 +676,7 @@
         const multiplier = Math.min(combo, 10);
         const totalPts = pts * multiplier;
         score += totalPts;
+        sfxCombo();
 
         comboEl.textContent = `${combo}x`;
 

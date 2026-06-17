@@ -100,6 +100,30 @@
     z-index: 1;
     pointer-events: none;
   }
+  #dpad {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    z-index: 10;
+    touch-action: none;
+  }
+  #dpad .row { display: flex; justify-content: center; }
+  #dpad button {
+    width: 56px; height: 56px;
+    margin: 3px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #dpad button:active { background: rgba(255,255,255,0.25); }
+  @media (hover: none) and (pointer: coarse) { #dpad { display: block; } #controls { display: none; } }
 </style>
 </head>
 <body>
@@ -114,6 +138,10 @@
 <button id="restart">↻ jugar de nuevo</button>
 <a id="menuLink" href="index.html">← menú</a>
 <div id="controls">WASD / flechas para moverte</div>
+<div id="dpad">
+  <div class="row"><button data-dir="up">↑</button></div>
+  <div class="row"><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div>
+</div>
 
 <script>
   const canvas = document.getElementById('c');
@@ -131,11 +159,47 @@
   const CELL_W = W / COLS, CELL_H = H / ROWS;
 
   let snake, food, dir, nextDir, score, speed, moveTimer, gameOver, gameRunning;
-  let particles = [];
+  let particles = [], stars = [];
+  let actx;
+
+  function initAudio() {
+    if (actx) return;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  function playTone(f, d, t = 'square', v = 0.06) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + d);
+  }
+  function playNote(f, s, d, t = 'square', v = 0.06) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, s);
+    g.gain.exponentialRampToValueAtTime(0.001, s + d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(s); o.stop(s + d);
+  }
+  function sfxEat() { playTone(600, 0.08, 'square', 0.05); setTimeout(() => playTone(800, 0.08, 'square', 0.05), 60); }
+  function sfxDeath() {
+    if (!actx) return;
+    [400, 350, 300, 200, 150].forEach((f, i) => playNote(f, actx.currentTime + i * 0.1, 0.15, 'sawtooth', 0.05));
+  }
+  function sfxWall() { playTone(250, 0.06, 'triangle', 0.04); }
+
+  function initStars() {
+    stars = Array.from({length: 50}, () => ({ x: rand(0, W), y: rand(0, H), r: rand(0.3, 1.5), s: rand(0.1, 0.3) }));
+  }
 
   function rand(a, b) { return Math.random() * (b - a) + a; }
 
   function init() {
+    initAudio();
+    initStars();
     snake = [{ x: 12, y: 8 }, { x: 11, y: 8 }, { x: 10, y: 8 }];
     dir = { x: 1, y: 0 };
     nextDir = { x: 1, y: 0 };
@@ -159,6 +223,7 @@
   }
 
   document.addEventListener('keydown', e => {
+    initAudio();
     const k = e.key;
     if ((k === 'ArrowUp' || k === 'w') && dir.y !== 1) nextDir = { x: 0, y: -1 };
     if ((k === 'ArrowDown' || k === 's') && dir.y !== -1) nextDir = { x: 0, y: 1 };
@@ -170,7 +235,43 @@
     if (k === 'Escape') window.location.href = 'juegos.html';
   });
 
+  document.addEventListener('click', initAudio, { once: true });
   restartBtn.addEventListener('click', init);
+
+  // Touch controls
+  document.querySelectorAll('#dpad button').forEach(btn => {
+    function press() {
+      const d = btn.dataset.dir;
+      if (d === 'up' && dir.y !== 1) nextDir = { x: 0, y: -1 };
+      if (d === 'down' && dir.y !== -1) nextDir = { x: 0, y: 1 };
+      if (d === 'left' && dir.x !== 1) nextDir = { x: -1, y: 0 };
+      if (d === 'right' && dir.x !== -1) nextDir = { x: 1, y: 0 };
+    }
+    btn.addEventListener('touchstart', e => { e.preventDefault(); press(); });
+    btn.addEventListener('mousedown', press);
+  });
+  // swipe support
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+  canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  canvas.addEventListener('touchend', e => {
+    if (!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0 && dir.x !== -1) nextDir = { x: 1, y: 0 };
+      else if (dx < 0 && dir.x !== 1) nextDir = { x: -1, y: 0 };
+    } else {
+      if (dy > 0 && dir.y !== -1) nextDir = { x: 0, y: 1 };
+      else if (dy < 0 && dir.y !== 1) nextDir = { x: 0, y: -1 };
+    }
+  }, { passive: true });
 
   function update() {
     if (!gameRunning || gameOver) return;
@@ -182,10 +283,20 @@
     dir = { x: nextDir.x, y: nextDir.y };
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS ||
-        snake.some(s => s.x === head.x && s.y === head.y)) {
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
       gameOver = true;
       gameRunning = false;
+      sfxDeath();
+      goSub.textContent = `longitud: ${snake.length}`;
+      goScore.textContent = `🏆 ${score}`;
+      gameoverEl.style.display = 'block';
+      restartBtn.style.display = 'block';
+      return;
+    }
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      gameOver = true;
+      gameRunning = false;
+      sfxDeath();
       goSub.textContent = `longitud: ${snake.length}`;
       goScore.textContent = `🏆 ${score}`;
       gameoverEl.style.display = 'block';
@@ -197,6 +308,7 @@
 
     if (head.x === food.x && head.y === food.y) {
       score += 10;
+      sfxEat();
       if (speed > 3) speed -= 0.15;
       spawnFood();
       for (let i = 0; i < 14; i++) {
@@ -218,6 +330,11 @@
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
+
+    stars.forEach(s => { s.y += s.s; if (s.y > H) { s.y = 0; s.x = rand(0, W); }
+      ctx.fillStyle = `rgba(255,255,255,${0.15 + Math.sin(s.y * 0.01) * 0.1})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    });
 
     for (let x = 0; x <= W; x += CELL_W) {
       ctx.strokeStyle = 'rgba(0,255,100,0.04)';

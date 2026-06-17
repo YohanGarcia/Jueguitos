@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 jueguitos</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #menu { text-align: center; color: #fff; }
+  #menu h1 {
+    font-size: 52px;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #f0c, #0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #menu p { opacity: 0.35; margin-bottom: 44px; font-size: 15px; }
+  .games { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+  .game-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px 44px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    min-width: 200px;
+  }
+  .game-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(100,100,255,0.2);
+  }
+  .game-btn .icon { font-size: 52px; }
+  .game-btn .name { font-size: 20px; font-weight: 700; color: #fff; }
+  .game-btn .desc { font-size: 13px; opacity: 0.45; }
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>🎮 jueguitos</h1>
+  <p>elegí y empezá a jugar</p>
+  <div class="games">
+    <a class="game-btn" href="entretenimiento.html">
+      <div class="icon">🔫</div>
+      <div class="name">Destructor de Círculos</div>
+      <div class="desc">Explotá círculos, esquivá bombas, subí de nivel</div>
+    </a>
+    <a class="game-btn" href="snake.html">
+      <div class="icon">🐍</div>
+      <div class="name">Snake</div>
+      <div class="desc">Comé y crecé sin chocarte</div>
+    </a>
+  </div>
+</div>
+</body>
+</html>

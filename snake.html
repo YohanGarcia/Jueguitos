@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 snake</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  canvas {
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(0, 255, 100, 0.12);
+    width: 1000px;
+    height: 650px;
+    max-width: 98vw;
+    max-height: 90vh;
+  }
+  #ui {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    gap: 24px;
+    background: rgba(255,255,255,0.06);
+    padding: 8px 20px;
+    border-radius: 30px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    z-index: 2;
+  }
+  #ui span { color: #66ff88; white-space: nowrap; }
+  #gameover {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    text-align: center;
+    display: none;
+    z-index: 3;
+    pointer-events: none;
+  }
+  #gameover h1 { font-size: 56px; margin-bottom: 4px; letter-spacing: 4px; }
+  #gameover p { font-size: 18px; opacity: 0.5; }
+  #gameover .final-score { font-size: 28px; color: #66ff88; margin-top: 8px; }
+  #restart {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 28px;
+    border: none;
+    border-radius: 30px;
+    background: #66ff88;
+    color: #0a0a1a;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    z-index: 3;
+    transition: transform 0.15s;
+  }
+  #restart:hover { transform: translateX(-50%) scale(1.05); }
+  #menuLink {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 5;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  #menuLink:hover { background: rgba(255,255,255,0.18); }
+  #controls {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.2);
+    font-size: 13px;
+    z-index: 1;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="ui">🏆 <span id="score">0</span></div>
+<div id="gameover">
+  <h1>🐍 GAME OVER</h1>
+  <p id="go-sub"></p>
+  <div class="final-score" id="go-score">0</div>
+</div>
+<button id="restart">↻ jugar de nuevo</button>
+<a id="menuLink" href="index.html">← menú</a>
+<div id="controls">WASD / flechas para moverte</div>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const gameoverEl = document.getElementById('gameover');
+  const goSub = document.getElementById('go-sub');
+  const goScore = document.getElementById('go-score');
+  const restartBtn = document.getElementById('restart');
+
+  const W = 1000, H = 650;
+  canvas.width = W; canvas.height = H;
+
+  const COLS = 25, ROWS = 16;
+  const CELL_W = W / COLS, CELL_H = H / ROWS;
+
+  let snake, food, dir, nextDir, score, speed, moveTimer, gameOver, gameRunning;
+  let particles = [];
+
+  function rand(a, b) { return Math.random() * (b - a) + a; }
+
+  function init() {
+    snake = [{ x: 12, y: 8 }, { x: 11, y: 8 }, { x: 10, y: 8 }];
+    dir = { x: 1, y: 0 };
+    nextDir = { x: 1, y: 0 };
+    score = 0;
+    speed = 8;
+    moveTimer = 0;
+    gameOver = false;
+    gameRunning = true;
+    particles = [];
+    spawnFood();
+    gameoverEl.style.display = 'none';
+    restartBtn.style.display = 'none';
+  }
+
+  function spawnFood() {
+    let free = [];
+    for (let x = 0; x < COLS; x++)
+      for (let y = 0; y < ROWS; y++)
+        if (!snake.some(s => s.x === x && s.y === y)) free.push({ x, y });
+    if (free.length) food = free[Math.floor(rand(0, free.length))];
+  }
+
+  document.addEventListener('keydown', e => {
+    const k = e.key;
+    if ((k === 'ArrowUp' || k === 'w') && dir.y !== 1) nextDir = { x: 0, y: -1 };
+    if ((k === 'ArrowDown' || k === 's') && dir.y !== -1) nextDir = { x: 0, y: 1 };
+    if ((k === 'ArrowLeft' || k === 'a') && dir.x !== 1) nextDir = { x: -1, y: 0 };
+    if ((k === 'ArrowRight' || k === 'd') && dir.x !== -1) nextDir = { x: 1, y: 0 };
+    if (k === 'r' || k === 'R' || k === ' ') {
+      if (!gameRunning || gameOver) { init(); e.preventDefault(); }
+    }
+    if (k === 'Escape') window.location.href = 'juegos.html';
+  });
+
+  restartBtn.addEventListener('click', init);
+
+  function update() {
+    if (!gameRunning || gameOver) return;
+
+    moveTimer++;
+    if (moveTimer < speed) return;
+    moveTimer = 0;
+
+    dir = { x: nextDir.x, y: nextDir.y };
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS ||
+        snake.some(s => s.x === head.x && s.y === head.y)) {
+      gameOver = true;
+      gameRunning = false;
+      goSub.textContent = `longitud: ${snake.length}`;
+      goScore.textContent = `🏆 ${score}`;
+      gameoverEl.style.display = 'block';
+      restartBtn.style.display = 'block';
+      return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score += 10;
+      if (speed > 3) speed -= 0.15;
+      spawnFood();
+      for (let i = 0; i < 14; i++) {
+        const a = rand(0, Math.PI*2), sp = rand(1, 5);
+        particles.push({ x: head.x*CELL_W+CELL_W/2, y: head.y*CELL_H+CELL_H/2, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, decay: rand(0.02, 0.04), size: rand(2, 5), hue: rand(100, 150) });
+      }
+    } else {
+      snake.pop();
+    }
+
+    for (let i = particles.length-1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    scoreEl.textContent = score;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (let x = 0; x <= W; x += CELL_W) {
+      ctx.strokeStyle = 'rgba(0,255,100,0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += CELL_H) {
+      ctx.strokeStyle = 'rgba(0,255,100,0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    for (let i = snake.length-1; i >= 0; i--) {
+      const s = snake[i];
+      const t = i / snake.length;
+      const g = ctx.createRadialGradient(s.x*CELL_W+4, s.y*CELL_H+4, 0, s.x*CELL_W+CELL_W/2, s.y*CELL_H+CELL_H/2, CELL_W/2);
+      if (i === 0) {
+        g.addColorStop(0, '#66ff88');
+        g.addColorStop(1, '#00cc44');
+      } else {
+        const l = Math.max(0.2, 0.9 - t * 0.7);
+        g.addColorStop(0, `rgba(50,255,100,${l})`);
+        g.addColorStop(1, `rgba(0,150,50,${l})`);
+      }
+      ctx.beginPath();
+      ctx.roundRect(s.x*CELL_W+2, s.y*CELL_H+2, CELL_W-4, CELL_H-4, 5);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      if (i === 0) {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(s.x*CELL_W+CELL_W*0.32, s.y*CELL_H+CELL_H*0.35, 2.5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(s.x*CELL_W+CELL_W*0.68, s.y*CELL_H+CELL_H*0.35, 2.5, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    if (food) {
+      const pulse = 1 + Math.sin(Date.now() * 0.005) * 0.15;
+      ctx.save();
+      ctx.translate(food.x*CELL_W+CELL_W/2, food.y*CELL_H+CELL_H/2);
+      ctx.scale(pulse, pulse);
+      const g = ctx.createRadialGradient(-3, -3, 0, 0, 0, CELL_W/2);
+      g.addColorStop(0, '#ff4488');
+      g.addColorStop(1, '#cc0044');
+      ctx.beginPath();
+      ctx.arc(0, 0, CELL_W/2-3, 0, Math.PI*2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★', 0, 1);
+      ctx.restore();
+    }
+
+    for (const p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = `hsl(${p.hue}, 90%, 70%)`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  init();
+  loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔫 destructor de circulos</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  canvas {
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(100, 100, 255, 0.15);
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='none' stroke='%23f0c' stroke-width='1.5' opacity='0.8'/%3E%3Cline x1='20' y1='4' x2='20' y2='12' stroke='%23f0c' stroke-width='1.5'/%3E%3Cline x1='20' y1='28' x2='20' y2='36' stroke='%23f0c' stroke-width='1.5'/%3E%3Cline x1='4' y1='20' x2='12' y2='20' stroke='%23f0c' stroke-width='1.5'/%3E%3Cline x1='28' y1='20' x2='36' y2='20' stroke='%23f0c' stroke-width='1.5'/%3E%3Ccircle cx='20' cy='20' r='2' fill='%23f0c'/%3E%3C/svg%3E") 20 20, crosshair;
+    width: 1000px;
+    height: 650px;
+    max-width: 98vw;
+    max-height: 90vh;
+  }
+  #ui {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    gap: 24px;
+    background: rgba(255,255,255,0.06);
+    padding: 8px 20px;
+    border-radius: 30px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    z-index: 2;
+  }
+  #ui span { color: #f0c; white-space: nowrap; }
+  #ui .yellow { color: #ff0; }
+  #gameover {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    text-align: center;
+    display: none;
+    z-index: 3;
+    pointer-events: none;
+  }
+  #gameover h1 { font-size: 56px; margin-bottom: 4px; letter-spacing: 4px; }
+  #gameover p { font-size: 18px; opacity: 0.5; }
+  #gameover .final-score { font-size: 28px; color: #f0c; margin-top: 8px; }
+  #restart {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 28px;
+    border: none;
+    border-radius: 30px;
+    background: #f0c;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: none;
+    z-index: 3;
+    transition: transform 0.15s;
+  }
+  #restart:hover { transform: translateX(-50%) scale(1.05); }
+  #menuLink {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 5;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  #menuLink:hover { background: rgba(255,255,255,0.18); }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="ui">
+  <span>🏆 <span id="score">0</span></span>
+  <span class="yellow">🔥 <span id="combo">0x</span></span>
+  <span>💀 <span id="lives">3</span></span>
+  <span style="color:#0ff">⬆ <span id="level">1</span></span>
+</div>
+<div id="gameover">
+  <h1>GAME OVER</h1>
+  <p>llegaste al nivel <span id="final-level">1</span></p>
+  <div class="final-score" id="final-score">0</div>
+  <div id="rank" style="font-size:14px;opacity:0.4;margin-top:6px"></div>
+</div>
+<button id="restart">↻ jugar de nuevo</button>
+<a id="menuLink" href="index.html">← menú</a>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const livesEl = document.getElementById('lives');
+  const comboEl = document.getElementById('combo');
+  const levelEl = document.getElementById('level');
+  const gameoverEl = document.getElementById('gameover');
+  const finalScoreEl = document.getElementById('final-score');
+  const finalLevelEl = document.getElementById('final-level');
+  const rankEl = document.getElementById('rank');
+  const restartBtn = document.getElementById('restart');
+
+  const W = 1000, H = 650;
+  canvas.width = W; canvas.height = H;
+
+  let score = 0, lives = 3, combo = 0, maxCombo = 0;
+  let level = 1;
+  let nextLevelScore = 50;
+  let levelUpTimer = 0;
+  let circles = [];
+  let maxCircles = 12;
+  let spawnTimer = 0;
+  let gameRunning = true;
+  let shakeX = 0, shakeY = 0;
+  let difficulty = 1;
+
+  let mouseX = -1, mouseY = -1, hoveredCircle = null;
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+  const TYPES = {
+    NORMAL: 'normal',
+    FAST: 'fast',
+    TANK: 'tank',
+    BOMB: 'bomb',
+    HEART: 'heart'
+  };
+
+  function pickType() {
+    const types = [
+      { t: TYPES.NORMAL, w: 60 },
+      { t: TYPES.FAST, w: level >= 2 ? 15 + level * 2 : 0 },
+      { t: TYPES.HEART, w: level >= 2 ? 7 : 0 },
+      { t: TYPES.TANK, w: level >= 3 ? 8 + level : 0 },
+      { t: TYPES.BOMB, w: level >= 4 ? 6 + level : 0 }
+    ];
+    const total = types.reduce((s, x) => s + x.w, 0);
+    let r = rand(0, total);
+    for (const x of types) {
+      r -= x.w;
+      if (r <= 0) return x.t;
+    }
+    return TYPES.NORMAL;
+  }
+
+  class Circle {
+    constructor() {
+      this.type = pickType();
+      this.alive = true;
+      this.hits = 1;
+      this.radius = 16;
+      this.vy = 0;
+      this.vx = 0;
+      this.hue = rand(0, 360);
+      this.pulse = 0;
+      this.flashTimer = 0;
+
+      if (this.type === TYPES.HEART) {
+        this.radius = rand(16, 22);
+        this.vy = rand(1.0, 2.0);
+        this.hue = 120;
+      } else if (this.type === TYPES.FAST) {
+        this.radius = rand(10, 14);
+        this.vy = rand(2.0, 4.0 + difficulty * 0.3);
+        this.hue = 180;
+      } else if (this.type === TYPES.TANK) {
+        this.radius = rand(24, 32);
+        this.vy = rand(0.8, 1.6);
+        this.hits = 2;
+        this.hue = 50;
+      } else if (this.type === TYPES.BOMB) {
+        this.radius = rand(16, 22);
+        this.vy = rand(1.5, 2.8);
+        this.hue = 0;
+      } else {
+        this.radius = rand(14, 22);
+        this.vy = rand(1.2, 2.8 + difficulty * 0.2);
+      }
+
+      this.x = rand(this.radius, W - this.radius);
+      this.y = -this.radius;
+      this.maxVy = this.vy;
+      this.vx = rand(-0.6, 0.6);
+    }
+
+    update() {
+      this.vy += 0.008;
+      if (this.vy > this.maxVy * 1.5) this.vy = this.maxVy * 1.5;
+      this.y += this.vy;
+      this.x += this.vx;
+      if (this.x - this.radius < 0 || this.x + this.radius > W) this.vx *= -1;
+      this.pulse = (this.pulse + 0.04) % (Math.PI * 2);
+      if (this.flashTimer > 0) this.flashTimer--;
+      if (this.y - this.radius > H) this.alive = false;
+    }
+
+    draw() {
+      const r = this.radius + Math.sin(this.pulse) * 1.5;
+      const flash = this.flashTimer > 0;
+
+      if (this.type === TYPES.BOMB) {
+        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+        grad.addColorStop(0, '#ff3300');
+        grad.addColorStop(0.6, '#cc0000');
+        grad.addColorStop(1, '#440000');
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = '#ff6600';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const s = r * 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${s * 1.2}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('☠', this.x, this.y + 1);
+        return;
+      }
+
+      if (this.type === TYPES.HEART) {
+        const grad = ctx.createRadialGradient(this.x - r*0.3, this.y - r*0.3, 0, this.x, this.y, r);
+        grad.addColorStop(0, '#66ff88');
+        grad.addColorStop(1, '#00aa33');
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = flash ? '#fff' : 'rgba(100,255,100,0.4)';
+        ctx.lineWidth = flash ? 3 : 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = `${r * 0.7}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('❤️', this.x, this.y + 2);
+        return;
+      }
+
+      if (this.type === TYPES.FAST) {
+        const grad = ctx.createRadialGradient(this.x - r*0.3, this.y - r*0.3, 0, this.x, this.y, r);
+        grad.addColorStop(0, '#66ffff');
+        grad.addColorStop(1, '#0088aa');
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = flash ? '#fff' : 'rgba(100,255,255,0.4)';
+        ctx.lineWidth = flash ? 3 : 1.5;
+        ctx.stroke();
+        return;
+      }
+
+      if (this.type === TYPES.TANK) {
+        const grad = ctx.createRadialGradient(this.x - r*0.3, this.y - r*0.3, 0, this.x, this.y, r);
+        grad.addColorStop(0, '#ffdd44');
+        grad.addColorStop(1, '#aa7700');
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = flash ? '#fff' : 'rgba(255,200,50,0.5)';
+        ctx.lineWidth = flash ? 3 : 2;
+        ctx.stroke();
+
+        const hp = this.hits;
+        for (let i = 0; i < hp; i++) {
+          const angle = (i / hp) * Math.PI * 2 - Math.PI / 2;
+          ctx.beginPath();
+          ctx.arc(this.x + Math.cos(angle) * r * 0.5, this.y + Math.sin(angle) * r * 0.5, 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+        }
+        return;
+      }
+
+      const grad = ctx.createRadialGradient(this.x - r*0.3, this.y - r*0.3, 0, this.x, this.y, r);
+      grad.addColorStop(0, `hsl(${this.hue}, 90%, 75%)`);
+      grad.addColorStop(1, `hsl(${this.hue}, 80%, 40%)`);
+      ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = flash ? '#fff' : `hsla(${this.hue}, 90%, 80%, 0.3)`;
+      ctx.lineWidth = flash ? 3 : 1.5;
+      ctx.stroke();
+    }
+
+    contains(px, py) {
+      const r = this.radius + Math.sin(this.pulse) * 1.5;
+      return (px - this.x) ** 2 + (py - this.y) ** 2 <= r ** 2;
+    }
+
+    getPoints() {
+      if (this.type === TYPES.FAST) return 3;
+      if (this.type === TYPES.TANK) return 5;
+      return 1;
+    }
+  }
+
+  let particles = [];
+  let texts = [];
+
+  function showParticles(x, y, hue, count = 16) {
+    for (let i = 0; i < count; i++) {
+      const angle = rand(0, Math.PI * 2);
+      const speed = rand(1, 6);
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        life: 1,
+        decay: rand(0.015, 0.035),
+        size: rand(2, 6),
+        hue
+      });
+    }
+  }
+
+  function showText(x, y, msg, color = '#fff') {
+    texts.push({ x, y, msg, color, life: 1, vy: -2 });
+  }
+
+  function spawnCircle() {
+    if (circles.length < maxCircles) circles.push(new Circle());
+  }
+
+  function endGame() {
+    gameRunning = false;
+    combo = 0;
+    comboEl.textContent = '0x';
+    gameoverEl.style.display = 'block';
+    finalScoreEl.textContent = `🏆 ${score}`;
+    finalLevelEl.textContent = level;
+    const ranks = ['novato', 'tirador', 'experto', 'maestro', 'leyenda', 'dios'];
+    const rankIdx = Math.min(5, Math.floor(level / 4));
+    rankEl.textContent = `rango: ${ranks[rankIdx]}`;
+    restartBtn.style.display = 'block';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'r' || e.key === 'R' || e.key === ' ') {
+      if (!gameRunning || restartBtn.style.display === 'block') {
+        restartBtn.click();
+        e.preventDefault();
+      }
+    }
+    if (e.key === 'Escape') window.location.href = 'juegos.html';
+  });
+
+  restartBtn.addEventListener('click', () => {
+    score = 0; lives = 3; combo = 0; maxCombo = 0; level = 1;
+    nextLevelScore = 50; levelUpTimer = 0; difficulty = 1;
+    circles = []; particles = []; texts = [];
+    maxCircles = 12; spawnTimer = 0;
+    gameRunning = true; shakeX = 0; shakeY = 0;
+    gameoverEl.style.display = 'none';
+    restartBtn.style.display = 'none';
+    comboEl.textContent = '0x';
+    levelEl.textContent = 1;
+  });
+
+  function update() {
+    if (!gameRunning) return;
+
+    if (levelUpTimer > 0) levelUpTimer--;
+
+    if (score >= nextLevelScore && level < 20) {
+      level++;
+      nextLevelScore = Math.floor(level * level * 25 + 30);
+      levelUpTimer = 50;
+      levelEl.textContent = level;
+      shakeX = 8; shakeY = 8;
+      showText(W / 2, H / 2 - 30, `⬆ NIVEL ${level}`, '#0ff');
+      showText(W / 2, H / 2 + 10, `🔥 ${level * 2}x puntos`, '#ff0');
+      for (let i = 0; i < 40; i++) {
+        const angle = rand(0, Math.PI * 2);
+        const speed = rand(2, 8);
+        particles.push({
+          x: W / 2, y: H / 2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          decay: rand(0.01, 0.025),
+          size: rand(3, 8),
+          hue: rand(180, 220)
+        });
+      }
+    }
+
+    difficulty = level;
+
+    spawnTimer++;
+    const spawnRate = Math.max(6, 46 - level * 3);
+    if (spawnTimer > spawnRate) {
+      spawnCircle();
+      spawnTimer = 0;
+    }
+
+    const maxAllowed = Math.min(35, 10 + level * 2);
+    if (maxCircles < maxAllowed) maxCircles = maxAllowed;
+
+    for (let i = circles.length - 1; i >= 0; i--) {
+      circles[i].update();
+      if (!circles[i].alive) {
+        circles.splice(i, 1);
+        if (gameRunning) {
+          lives--;
+          combo = 0;
+          comboEl.textContent = '0x';
+          shakeX = 6; shakeY = 6;
+          if (lives <= 0) endGame();
+        }
+      }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.12;
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    for (let i = texts.length - 1; i >= 0; i--) {
+      const t = texts[i];
+      t.y += t.vy;
+      t.life -= 0.02;
+      if (t.life <= 0) texts.splice(i, 1);
+    }
+
+    if (shakeX > 0) shakeX *= 0.85;
+    if (shakeY > 0) shakeY *= 0.85;
+    if (shakeX < 0.1) shakeX = 0;
+    if (shakeY < 0.1) shakeY = 0;
+
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+  }
+
+  function draw() {
+    ctx.save();
+    ctx.translate(rand(-shakeX, shakeX), rand(-shakeY, shakeY));
+
+    ctx.clearRect(-10, -10, W + 20, H + 20);
+
+    for (let x = 0; x <= W; x += 30) {
+      ctx.strokeStyle = `rgba(255,255,255,${0.02 + Math.sin(x * 0.1 + Date.now() * 0.0005) * 0.01})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += 30) {
+      ctx.strokeStyle = `rgba(255,255,255,${0.02 + Math.sin(y * 0.1 + Date.now() * 0.0005) * 0.01})`;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    if (levelUpTimer > 0) {
+      const flash = (levelUpTimer % 10 < 5) ? 0.12 : 0;
+      ctx.fillStyle = `rgba(0,255,255,${flash})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.strokeStyle = `rgba(0,255,255,${0.05 + level * 0.005})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, W - 8, H - 8);
+
+    const dangerY = H - 50;
+    const dangerGrad = ctx.createLinearGradient(0, dangerY, 0, H);
+    dangerGrad.addColorStop(0, 'rgba(255,0,0,0)');
+    dangerGrad.addColorStop(0.5, 'rgba(255,0,0,0.08)');
+    dangerGrad.addColorStop(1, 'rgba(255,0,0,0.2)');
+    ctx.fillStyle = dangerGrad;
+    ctx.fillRect(0, dangerY, W, H - dangerY);
+
+    ctx.strokeStyle = 'rgba(255,50,50,0.3)';
+    ctx.setLineDash([6, 8]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, dangerY); ctx.lineTo(W, dangerY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (hoveredCircle) {
+      const hr = hoveredCircle.radius + Math.sin(hoveredCircle.pulse) * 1.5;
+      const glow = 0.3 + Math.sin(Date.now() * 0.01) * 0.15;
+      ctx.beginPath();
+      ctx.arc(hoveredCircle.x, hoveredCircle.y, hr + 6 + Math.sin(Date.now() * 0.008) * 2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${glow})`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(hoveredCircle.x, hoveredCircle.y, hr + 12, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${glow * 0.4})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    for (const c of circles) c.draw();
+
+    drawParticles();
+
+    for (const t of texts) {
+      ctx.globalAlpha = t.life;
+      ctx.fillStyle = t.color;
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t.msg, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+
+    if (combo >= 3) {
+      ctx.fillStyle = `rgba(255,255,0,${0.3 + Math.sin(Date.now() * 0.008) * 0.15})`;
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`🔥 COMBO x${combo}`, 10, 10);
+    }
+
+    const progress = Math.min(1, score / nextLevelScore);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(W - 160, 10, 150, 8);
+    ctx.fillStyle = `rgba(0,255,255,${0.4 + 0.3 * (1 - progress)})`;
+    ctx.fillRect(W - 160, 10, 150 * progress, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`NIVEL ${level}`, W - 12, 22);
+
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = `hsl(${p.hue}, 90%, 70%)`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    mouseX = (e.clientX - rect.left) * scaleX;
+    mouseY = (e.clientY - rect.top) * scaleY;
+    hoveredCircle = null;
+    for (let i = circles.length - 1; i >= 0; i--) {
+      if (circles[i].contains(mouseX, mouseY)) {
+        hoveredCircle = circles[i];
+        break;
+      }
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    mouseX = -1;
+    mouseY = -1;
+    hoveredCircle = null;
+  });
+
+  canvas.addEventListener('click', e => {
+    if (!gameRunning) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    for (let i = circles.length - 1; i >= 0; i--) {
+      const c = circles[i];
+      if (c.contains(mx, my)) {
+        if (c.type === TYPES.BOMB) {
+          showParticles(c.x, c.y, 0, 30);
+          showText(c.x, c.y, '💥', '#ff3300');
+          circles.splice(i, 1);
+          combo = 0;
+          comboEl.textContent = '0x';
+          lives--;
+          shakeX = 10; shakeY = 10;
+          if (lives <= 0) endGame();
+          return;
+        }
+
+        if (c.type === TYPES.HEART) {
+          showParticles(c.x, c.y, 120, 20);
+          showText(c.x, c.y, '+1 ❤️', '#66ff88');
+          circles.splice(i, 1);
+          if (lives < 5) lives++;
+          livesEl.textContent = lives;
+          return;
+        }
+
+        c.hits--;
+        if (c.hits > 0) {
+          c.flashTimer = 6;
+          c.hue += 20;
+          showParticles(c.x, c.y, c.hue, 6);
+          return;
+        }
+
+        let pts = c.getPoints();
+        combo++;
+        if (combo > maxCombo) maxCombo = combo;
+        const multiplier = Math.min(combo, 10);
+        const totalPts = pts * multiplier;
+        score += totalPts;
+
+        comboEl.textContent = `${combo}x`;
+
+        const ptsMsg = multiplier > 1 ? `+${totalPts} (${multiplier}x)` : `+${totalPts}`;
+        const colors = { [TYPES.FAST]: '#66ffff', [TYPES.TANK]: '#ffdd44' };
+        showText(c.x, c.y - 10, ptsMsg, colors[c.type] || '#fff');
+
+        showParticles(c.x, c.y, c.hue, c.type === TYPES.TANK ? 28 : 16);
+
+        if (c.type === TYPES.TANK) {
+          shakeX = 4; shakeY = 4;
+        }
+
+        circles.splice(i, 1);
+        return;
+      }
+    }
+  });
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+</script>
+</body>
+</html>

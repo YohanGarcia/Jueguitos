@@ -1,6 +1,10 @@
 # 🎮 Jueguitos
 
+[![Jugar](https://img.shields.io/badge/jugar-Jueguitos-ff69b4?style=for-the-badge)](https://yohangarcia.github.io/Jueguitos/)
+
 Colección de juegos HTML/Canvas open source. Livianos, sin dependencias, listos para jugar en el navegador.
+
+👉 **Jugá online:** https://yohangarcia.github.io/Jueguitos/
 
 ## Juegos
 

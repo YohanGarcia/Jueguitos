@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🏴‍☠️ Ahorcado</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body {
+  background: #0a0a12;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif; color: #fff;
+}
+#menuLink {
+  position: absolute; top: 16px; left: 16px;
+  padding: 8px 18px; border: none; border-radius: 30px;
+  background: rgba(255,255,255,0.08); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; z-index: 5;
+  text-decoration: none; transition: background 0.15s;
+}
+#menuLink:hover { background: rgba(255,255,255,0.18); }
+#app { width: min(98vw, 900px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.head { display: flex; width: 100%; gap: 10px; }
+.scorebox {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1;
+}
+.scorebox .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.scorebox .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.scorebox.best .v { color: #fbbf24; }
+#boardWrap { position: relative; width: 100%; }
+canvas {
+  display: block; width: 100%; height: auto; touch-action: none; border-radius: 16px;
+  max-width: 98vw; max-height: 86vh;
+}
+#overlay {
+  position: absolute; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(8,8,20,0.85); border-radius: 16px; backdrop-filter: blur(4px);
+  text-align: center; z-index: 3;
+}
+#overlay h2 { font-size: 38px; letter-spacing: 2px; }
+#overlay h2.win { color: #4ade80; }
+#overlay h2.lose { color: #ff5d5d; }
+#overlay p { font-size: 15px; color: rgba(255,255,255,0.5); }
+#overlay .final { font-size: 26px; color: #fbbf24; font-weight: 700; margin-top: 4px; }
+#overlay .btns { display: flex; gap: 10px; margin-top: 6px; }
+#overlay button {
+  padding: 11px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: transform 0.12s;
+}
+#overlay button:hover { transform: scale(1.04); }
+#againBtn { background: #fbbf24; color: #0a0a12; }
+.hint { font-size: 12px; color: rgba(255,255,255,0.22); text-align: center; width: 100%; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<div id="app">
+  <div class="head">
+    <div class="scorebox"><div class="lbl">palabra</div><div class="v" id="wordNum">1</div></div>
+    <div class="scorebox"><div class="lbl">errores</div><div class="v" id="errorsDisplay">0/6</div></div>
+    <div class="scorebox"><div class="lbl">puntos</div><div class="v" id="scoreDisplay">0</div></div>
+    <div class="scorebox best"><div class="lbl">récord</div><div class="v" id="bestDisplay">0</div></div>
+  </div>
+  <div id="boardWrap">
+    <canvas id="c" width="1000" height="620"></canvas>
+    <div id="overlay">
+      <h2 id="ovTitle">🏴‍☠️</h2>
+      <p id="ovSub"></p>
+      <div class="final" id="ovFinal"></div>
+      <div class="btns"><button id="againBtn">jugar de nuevo</button></div>
+    </div>
+  </div>
+  <div class="hint">presioná una letra en el teclado · click en la letra en pantalla · R · Escape</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1000, H = 620;
+
+const WORDS = [
+  'CASA','PERRO','GATO','ARBOL','SOL','LUNA','AGUA','FUEGO','TIERRA','VIENTO',
+  'PLAYA','MONTAÑA','RIO','LAGO','MAR','CIELO','ESTRELLA','NUBE','LLUVIA','NIEVE',
+  'MANZANA','NARANJA','UVA','FRUTA','PAN','LECHE','HUEVO','JAMON',
+  'FELIZ','AMOR','PAZ','SUERTE','VIDA','JUEGO','MUSICA','LIBRO','RISA',
+  'ROJO','AZUL','VERDE','BLANCO','NEGRO','DORADO','ROSA',
+  'ELEFANTE','TIBURON','BALLENA','AGUILA','SERPIENTE','MARIPOSA',
+  'PIRATA','TESORO','MAPACHE','VOLCAN','DESIERTO','JARDIN',
+  'BICICLETA','CAMINO','PUENTE','CASTILLO','VENTANA','ESPADA',
+  'CABALLERO','DRAGON','MAGIA','ESTRELLA','COMETA','COHETE',
+];
+
+const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM'];
+
+let palabra = '';
+let revealed = [];
+let guessed = [];
+let errors = 0;
+let maxErrors = 6;
+let score = 0;
+let best = 0;
+let wordCount = 0;
+let gameOver = false;
+let won = false;
+let keyButtons = [];
+
+let actx;
+function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(f, d, t = 'sine', v = 0.05) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = t; o.frequency.value = f;
+  g.gain.setValueAtTime(v, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+  o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+}
+function sfxCorrect() { tone(500, 0.06, 'triangle', 0.03); setTimeout(() => tone(700, 0.08, 'triangle', 0.03), 60); }
+function sfxError() { tone(200, 0.12, 'sawtooth', 0.04); }
+function sfxWin() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.1,'square',0.04), i*80)); }
+function sfxLose() { [392,330,262,196].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'sawtooth',0.04), i*100)); }
+
+function pickWord() {
+  const prev = palabra;
+  let w;
+  do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (w === prev && WORDS.length > 1);
+  palabra = w;
+  revealed = Array(palabra.length).fill(false);
+}
+
+function guessLetter(letter) {
+  if (gameOver) return;
+  initAudio();
+  letter = letter.toUpperCase();
+  if (guessed.includes(letter) || letter.length !== 1) return;
+  guessed.push(letter);
+
+  let found = false;
+  for (let i = 0; i < palabra.length; i++) {
+    if (palabra[i] === letter) { revealed[i] = true; found = true; }
+  }
+
+  if (found) {
+    sfxCorrect();
+    // Check win
+    if (revealed.every(r => r)) {
+      won = true;
+      gameOver = true;
+      const pts = Math.max(10, 30 - errors * 3);
+      score += pts;
+      if (score > best) { best = score; localStorage.setItem('ahorcadoBest', best.toString()); }
+      sfxWin();
+      updateUI();
+      setTimeout(() => {
+        document.getElementById('ovTitle').className = 'win';
+        document.getElementById('ovTitle').textContent = '🏴‍☠️ ¡SALVASTE!';
+        document.getElementById('ovSub').textContent = `"${palabra}" · +${pts} pts`;
+        document.getElementById('ovFinal').textContent = `🏆 ${score} pts`;
+        document.getElementById('overlay').style.display = 'flex';
+      }, 500);
+    }
+  } else {
+    errors++;
+    sfxError();
+    if (errors >= maxErrors) {
+      gameOver = true;
+      if (score > best) { best = score; localStorage.setItem('ahorcadoBest', best.toString()); }
+      sfxLose();
+      updateUI();
+      setTimeout(() => {
+        document.getElementById('ovTitle').className = 'lose';
+        document.getElementById('ovTitle').textContent = '🏴‍☠️ AHORCADO';
+        document.getElementById('ovSub').textContent = `la palabra era "${palabra}"`;
+        document.getElementById('ovFinal').textContent = `puntos: ${score}`;
+        document.getElementById('overlay').style.display = 'flex';
+      }, 500);
+    }
+  }
+  updateUI();
+}
+
+function nextWord() {
+  wordCount++;
+  errors = 0;
+  guessed = [];
+  won = false;
+  gameOver = false;
+  pickWord();
+  updateUI();
+}
+
+function updateUI() {
+  document.getElementById('wordNum').textContent = wordCount;
+  document.getElementById('errorsDisplay').textContent = `${errors}/${maxErrors}`;
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('bestDisplay').textContent = best;
+}
+
+function init() {
+  score = 0; wordCount = 0; errors = 0; guessed = []; gameOver = false; won = false;
+  best = parseInt(localStorage.getItem('ahorcadoBest') || '0', 10);
+  document.getElementById('overlay').style.display = 'none';
+  nextWord();
+}
+
+function drawHangman() {
+  const bx = 60, by = 80;
+  ctx.save();
+  ctx.translate(bx, by);
+
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 3;
+
+  // Base
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, 360); ctx.lineTo(140, 360); ctx.stroke();
+  // Post
+  ctx.beginPath(); ctx.moveTo(40, 360); ctx.lineTo(40, 20); ctx.stroke();
+  // Top
+  ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(100, 20); ctx.stroke();
+  // Rope
+  ctx.beginPath(); ctx.moveTo(100, 20); ctx.lineTo(100, 60); ctx.stroke();
+
+  ctx.lineWidth = 2.5;
+  // Body parts
+  const parts = [];
+  if (errors >= 1) parts.push(() => { // Head
+    ctx.beginPath(); ctx.arc(100, 80, 20, 0, Math.PI * 2); ctx.stroke();
+    // Face
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(92, 76, 4, 4); ctx.fillRect(104, 76, 4, 4);
+    ctx.beginPath(); ctx.arc(100, 86, 6, 0, Math.PI); ctx.stroke();
+  });
+  if (errors >= 2) parts.push(() => { // Body
+    ctx.beginPath(); ctx.moveTo(100, 100); ctx.lineTo(100, 200); ctx.stroke();
+  });
+  if (errors >= 3) parts.push(() => { // Left arm
+    ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(60, 160); ctx.stroke();
+  });
+  if (errors >= 4) parts.push(() => { // Right arm
+    ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(140, 160); ctx.stroke();
+  });
+  if (errors >= 5) parts.push(() => { // Left leg
+    ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(65, 270); ctx.stroke();
+  });
+  if (errors >= 6) parts.push(() => { // Right leg
+    ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(135, 270); ctx.stroke();
+  });
+
+  for (const p of parts) p();
+
+  // Rope tension
+  if (gameOver && !won) {
+    ctx.strokeStyle = '#ff5d5d';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(100, 60); ctx.lineTo(100, errors >= 1 ? 60 : 100); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+function drawWord() {
+  const startX = 400;
+  const y = 240;
+  const letterGap = 50;
+  const totalW = palabra.length * letterGap;
+  const ox = startX + (500 - totalW) / 2;
+
+  for (let i = 0; i < palabra.length; i++) {
+    const x = ox + i * letterGap;
+    if (revealed[i]) {
+      ctx.fillStyle = revealed[i] ? '#4ade80' : '#fff';
+      ctx.font = "bold 36px 'Segoe UI', monospace";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(palabra[i], x + letterGap / 2, y);
+    } else {
+      // Letter line
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(x + 6, y + 4, letterGap - 12, 3);
+    }
+  }
+}
+
+function drawKeyboard() {
+  const ky = 340;
+  const keyW = 40, keyH = 36, gap = 4;
+
+  keyButtons = [];
+
+  for (let row = 0; row < KEYBOARD_ROWS.length; row++) {
+    const keys = KEYBOARD_ROWS[row];
+    const totalW = keys.length * (keyW + gap);
+    let ox = (W - totalW) / 2;
+    if (row === 1) ox += keyW / 2;
+    if (row === 2) ox += keyW;
+
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const x = ox + i * (keyW + gap);
+      const y = ky + row * (keyH + gap);
+      const used = guessed.includes(k);
+      const correct = used && palabra.includes(k);
+      const wrong = used && !palabra.includes(k);
+
+      ctx.fillStyle = wrong ? 'rgba(255,80,80,0.15)' : correct ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)';
+      roundRect(x, y, keyW, keyH, 6); ctx.fill();
+      ctx.strokeStyle = wrong ? 'rgba(255,80,80,0.3)' : correct ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      roundRect(x, y, keyW, keyH, 6); ctx.stroke();
+
+      ctx.fillStyle = wrong ? 'rgba(255,80,80,0.4)' : correct ? '#4ade80' : 'rgba(255,255,255,0.7)';
+      ctx.font = "bold 16px 'Segoe UI', sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(k, x + keyW / 2, y + keyH / 2);
+
+      keyButtons.push({ x, y, w: keyW, h: keyH, key: k });
+    }
+  }
+}
+
+function drawWrongLetters() {
+  const wrong = guessed.filter(k => !palabra.includes(k));
+  if (wrong.length === 0) return;
+  ctx.fillStyle = 'rgba(255,80,80,0.4)';
+  ctx.font = "14px 'Segoe UI', sans-serif";
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('✘ ' + wrong.join(' '), 400, 300);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Category hint
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.font = "12px 'Segoe UI', sans-serif";
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(`palabra #${wordCount} · ${palabra.length} letras`, 30, 20);
+
+  drawHangman();
+  drawWord();
+  drawWrongLetters();
+  drawKeyboard();
+
+  // Error indicator
+  ctx.fillStyle = errors >= maxErrors ? '#ff5d5d' : '#fbbf24';
+  ctx.font = "bold 13px 'Segoe UI', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.fillText(`errores: ${'✘'.repeat(errors)}${'○'.repeat(maxErrors - errors)}`, 200, 465);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+canvas.addEventListener('click', e => {
+  if (gameOver) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sy;
+  for (const btn of keyButtons) {
+    if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
+      guessLetter(btn.key);
+      return;
+    }
+  }
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (gameOver) return;
+  const t = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  const mx = (t.clientX - rect.left) * sx;
+  const my = (t.clientY - rect.top) * sy;
+  for (const btn of keyButtons) {
+    if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
+      guessLetter(btn.key);
+      return;
+    }
+  }
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; }
+  if (e.key === 'r' || e.key === 'R') { init(); }
+  if (gameOver) return;
+  const key = e.key.toUpperCase();
+  if (/^[A-ZÑ]$/.test(key)) guessLetter(key);
+});
+
+document.getElementById('againBtn').addEventListener('click', () => { initAudio(); init(); });
+document.addEventListener('click', () => initAudio(), { once: true });
+
+init();
+(function loop() { draw(); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

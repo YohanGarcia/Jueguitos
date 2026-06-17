@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎯 Dardos</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body {
+  background: #0a0a12;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif; color: #fff;
+}
+#menuLink {
+  position: absolute; top: 16px; left: 16px;
+  padding: 8px 18px; border: none; border-radius: 30px;
+  background: rgba(255,255,255,0.08); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; z-index: 5;
+  text-decoration: none; transition: background 0.15s;
+}
+#menuLink:hover { background: rgba(255,255,255,0.18); }
+#app { width: min(98vw, 1100px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.head { display: flex; width: 100%; gap: 10px; }
+.scorebox {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1;
+}
+.scorebox .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.scorebox .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.scorebox.best .v { color: #3ae65a; }
+#boardWrap { position: relative; width: 100%; }
+canvas {
+  display: block; width: 100%; height: auto; touch-action: none; border-radius: 16px;
+  max-width: 98vw; max-height: 86vh;
+}
+#overlay {
+  position: absolute; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(8,8,20,0.85); border-radius: 16px; backdrop-filter: blur(4px);
+  text-align: center; z-index: 3;
+}
+#overlay h2 { font-size: 38px; letter-spacing: 2px; color: #3ae65a; }
+#overlay p { font-size: 15px; color: rgba(255,255,255,0.5); }
+#overlay .final { font-size: 26px; color: #fff; font-weight: 700; margin-top: 4px; }
+#overlay .btns { display: flex; gap: 10px; margin-top: 6px; }
+#overlay button {
+  padding: 11px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: transform 0.12s;
+}
+#overlay button:hover { transform: scale(1.04); }
+#againBtn { background: #3ae65a; color: #0a0a12; }
+.hint { font-size: 12px; color: rgba(255,255,255,0.22); text-align: center; width: 100%; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<div id="app">
+  <div class="head">
+    <div class="scorebox"><div class="lbl">ronda</div><div class="v" id="roundDisplay">1/10</div></div>
+    <div class="scorebox"><div class="lbl">dardos</div><div class="v" id="dartsDisplay">🎯🎯🎯</div></div>
+    <div class="scorebox"><div class="lbl">puntos</div><div class="v" id="scoreDisplay">0</div></div>
+    <div class="scorebox best"><div class="lbl">récord</div><div class="v" id="bestDisplay">0</div></div>
+  </div>
+  <div id="boardWrap">
+    <canvas id="c" width="1000" height="650"></canvas>
+    <div id="overlay">
+      <h2>🎯 PARTIDA COMPLETA</h2>
+      <p id="ovSub"></p>
+      <div class="final" id="ovFinal"></div>
+      <div class="btns"><button id="againBtn">jugar de nuevo</button></div>
+    </div>
+  </div>
+  <div class="hint">apuntá y hacé clic para lanzar · la línea punteada muestra la trayectoria · R · Escape</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1000, H = 650;
+
+const CX = 500, CY = 310;
+const BOARD_R = 220;
+const HAND_Y = 30;
+
+const SEGMENTS = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+const SEG_ANG = (Math.PI * 2) / 20;
+
+const R_DEFS = [
+  { rFrac: 0.035, label: 'bull_inner' },
+  { rFrac: 0.10,  label: 'bull_outer' },
+  { rFrac: 0.34,  label: 'triple_inner' },
+  { rFrac: 0.40,  label: 'triple_outer' },
+  { rFrac: 0.84,  label: 'double_inner' },
+  { rFrac: 0.96,  label: 'double_outer' },
+];
+
+const SEG_COLORS = ['#e31b23', '#2a7a2a'];
+
+let round = 1, dartsLeft = 3, score = 0, best = 0;
+let thrown = [];
+let aimX = CX, aimY = CY;
+let gameOver = false;
+let animDart = null;
+let floatTexts = [];
+let particles = [];
+let powerLevel = 1;
+let roundHistory = [];
+
+function getScore(x, y) {
+  const dx = x - CX, dy = y - CY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > BOARD_R) return 0;
+  if (dist <= R_DEFS[0].rFrac * BOARD_R) return 50;
+  if (dist <= R_DEFS[1].rFrac * BOARD_R) return 25;
+  let angle = Math.atan2(dy, dx) + Math.PI / 2;
+  if (angle < 0) angle += Math.PI * 2;
+  const segIdx = Math.floor(angle / SEG_ANG) % 20;
+  const segVal = SEGMENTS[segIdx];
+  const ti = R_DEFS[2].rFrac * BOARD_R;
+  const to = R_DEFS[3].rFrac * BOARD_R;
+  const di = R_DEFS[4].rFrac * BOARD_R;
+  const dout = R_DEFS[5].rFrac * BOARD_R;
+  if (dist >= ti && dist <= to) return segVal * 3;
+  if (dist >= di && dist <= dout) return segVal * 2;
+  return segVal;
+}
+
+function getLabel(pts) {
+  if (pts === 50) return '🎯 BULLSEYE!';
+  if (pts === 25) return 'outer bull';
+  if (pts >= 60) return `🔥 TRIPLE ${pts / 3}!`;
+  if (pts >= 40) return `✨ DOUBLE ${pts / 2}!`;
+  if (pts >= 20) return `${pts} pts`;
+  if (pts > 0) return `${pts} pts`;
+  return 'fallaste';
+}
+
+let actx;
+function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(f, d, t = 'sine', v = 0.05) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = t; o.frequency.value = f;
+  g.gain.setValueAtTime(v, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+  o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+}
+function sfxThrow() { tone(250, 0.04, 'triangle', 0.02); setTimeout(() => tone(140, 0.05, 'triangle', 0.015), 15); }
+function sfxHit(pts) {
+  if (pts === 50) { tone(1000, 0.08, 'square', 0.06); setTimeout(() => tone(1500, 0.1, 'square', 0.05), 60); }
+  else if (pts >= 60) { tone(800, 0.06, 'square', 0.05); setTimeout(() => tone(1100, 0.08, 'square', 0.04), 50); }
+  else if (pts >= 40) { tone(600, 0.05, 'triangle', 0.04); }
+  else if (pts > 0) { tone(400, 0.04, 'sine', 0.03); }
+  else { tone(100, 0.12, 'sawtooth', 0.025); }
+}
+function sfxRound() { [440,554,659].forEach((f,i)=>setTimeout(()=>tone(f,0.08,'square',0.04), i*60)); }
+function sfxEnd() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.1,'square',0.05), i*80)); }
+
+function addParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 1 + Math.random() * 4;
+    particles.push({ x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd - 1, life: 1, decay: 0.008 + Math.random() * 0.02, color, size: 2 + Math.random() * 3 });
+  }
+}
+
+function addFloatText(x, y, text, color, size) {
+  floatTexts.push({ x, y, text, color, size: size || 20, life: 1, vy: -1.5 });
+}
+
+function throwDart() {
+  if (gameOver || dartsLeft === 0 || animDart) return;
+  initAudio();
+  animDart = { fromX: aimX, fromY: HAND_Y, toX: aimX, toY: aimY, pts: getScore(aimX, aimY), progress: 0, power: powerLevel };
+  sfxThrow();
+}
+
+function finishThrow() {
+  const d = animDart;
+  thrown.push({ x: d.toX, y: d.toY, pts: d.pts });
+  score += d.pts;
+  dartsLeft--;
+  animDart = null;
+  sfxHit(d.pts);
+  const col = d.pts === 50 ? '#ffd700' : d.pts >= 60 ? '#ff5d8a' : d.pts >= 40 ? '#3ae65a' : d.pts > 0 ? '#fff' : '#888';
+  addFloatText(d.toX, d.toY - 20, getLabel(d.pts), col, d.pts >= 50 ? 24 : 20);
+  if (d.pts > 0) addParticles(d.toX, d.toY, d.pts >= 50 ? '#ffd700' : '#3ae65a', d.pts >= 50 ? 20 : 6);
+  if (d.pts === 50) { addParticles(d.toX, d.toY, '#ffd700', 25); addParticles(d.toX, d.toY, '#ff5d8a', 15); }
+  updateUI();
+  if (dartsLeft === 0) {
+    roundHistory.push({ n: round, score });
+    if (round >= 10) {
+      gameOver = true;
+      if (score > best) { best = score; localStorage.setItem('dardosBest', best.toString()); }
+      sfxEnd();
+      document.getElementById('ovSub').textContent = `total: ${score} pts`;
+      document.getElementById('ovFinal').textContent = `🎯 ${score} pts`;
+      document.getElementById('overlay').style.display = 'flex';
+    } else { sfxRound(); setTimeout(() => { round++; dartsLeft = 3; updateUI(); }, 700); }
+  }
+}
+
+function updateUI() {
+  document.getElementById('roundDisplay').textContent = `${round}/10`;
+  document.getElementById('dartsDisplay').textContent = dartsLeft > 0 ? '🎯'.repeat(dartsLeft) : '—';
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('bestDisplay').textContent = best;
+}
+
+function init() {
+  round = 1; dartsLeft = 3; score = 0; gameOver = false; thrown = []; animDart = null; floatTexts = []; particles = []; roundHistory = [];
+  best = parseInt(localStorage.getItem('dardosBest') || '0', 10);
+  document.getElementById('overlay').style.display = 'none';
+  aimX = CX; aimY = CY; powerLevel = 1;
+  updateUI();
+}
+
+function drawBoard() {
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 60;
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath(); ctx.arc(CX, CY, BOARD_R + 18, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  // Cabinet wood
+  const cabR = BOARD_R + 14;
+  for (let a = 0; a < Math.PI * 2; a += 0.05) {
+    const x = CX + Math.cos(a) * (cabR - 2 + Math.sin(a * 6) * 1.5);
+    const y = CY + Math.sin(a) * (cabR - 2 + Math.cos(a * 6) * 1.5);
+    ctx.fillStyle = `hsl(${28 + Math.sin(a * 3) * 8}, 45%, ${25 + Math.sin(a * 4 + 1) * 8}%)`;
+    ctx.fillRect(x - 1, y - 5, 2, 10);
+  }
+  // Board BG
+  ctx.fillStyle = '#1a2a1a';
+  ctx.beginPath(); ctx.arc(CX, CY, BOARD_R, 0, Math.PI * 2); ctx.fill();
+  // Segments
+  for (let i = 0; i < 20; i++) {
+    const sa = i * SEG_ANG - Math.PI / 2;
+    const ea = (i + 1) * SEG_ANG - Math.PI / 2;
+    const c = SEG_COLORS[i % 2];
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[3].rFrac * BOARD_R, sa, ea);
+    ctx.arc(CX, CY, R_DEFS[2].rFrac * BOARD_R, ea, sa, true); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[5].rFrac * BOARD_R, sa, ea);
+    ctx.arc(CX, CY, R_DEFS[4].rFrac * BOARD_R, ea, sa, true); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[4].rFrac * BOARD_R, sa, ea);
+    ctx.arc(CX, CY, R_DEFS[3].rFrac * BOARD_R, ea, sa, true); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[2].rFrac * BOARD_R, sa, ea);
+    ctx.arc(CX, CY, R_DEFS[1].rFrac * BOARD_R, ea, sa, true); ctx.closePath(); ctx.fill();
+  }
+  // Black rings
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[5].rFrac * BOARD_R, 0, Math.PI * 2);
+  ctx.arc(CX, CY, R_DEFS[4].rFrac * BOARD_R, 0, Math.PI * 2, true); ctx.fill();
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[3].rFrac * BOARD_R, 0, Math.PI * 2);
+  ctx.arc(CX, CY, R_DEFS[2].rFrac * BOARD_R, 0, Math.PI * 2, true); ctx.fill();
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[1].rFrac * BOARD_R, 0, Math.PI * 2);
+  ctx.arc(CX, CY, R_DEFS[0].rFrac * BOARD_R, 0, Math.PI * 2, true); ctx.fill();
+  // Bulls
+  ctx.fillStyle = '#1a8a1a';
+  ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[1].rFrac * BOARD_R, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e31b23';
+  ctx.beginPath(); ctx.arc(CX, CY, R_DEFS[0].rFrac * BOARD_R, 0, Math.PI * 2); ctx.fill();
+  // Wires
+  ctx.strokeStyle = 'rgba(200,200,200,0.1)'; ctx.lineWidth = 0.5;
+  for (let i = 0; i < 20; i++) {
+    const ang = i * SEG_ANG - Math.PI / 2;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + Math.cos(ang) * BOARD_R, CY + Math.sin(ang) * BOARD_R); ctx.stroke();
+  }
+  for (const rd of R_DEFS) { ctx.beginPath(); ctx.arc(CX, CY, rd.rFrac * BOARD_R, 0, Math.PI * 2); ctx.stroke(); }
+  // Numbers
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 3;
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font = "bold 14px 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < 20; i++) {
+    const ang = i * SEG_ANG - Math.PI / 2;
+    ctx.fillText(SEGMENTS[i], CX + Math.cos(ang) * (BOARD_R + 24), CY + Math.sin(ang) * (BOARD_R + 24));
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawDart(x, y, stuck, pts) {
+  ctx.save();
+  ctx.translate(x, y);
+  const angle = Math.atan2(y - CY, x - CX) + Math.PI;
+  if (!(Math.abs(x - CX) < 1 && Math.abs(y - CY) < 1)) ctx.rotate(angle);
+  else ctx.rotate(-Math.PI / 2);
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
+  ctx.fillStyle = '#ddd';
+  ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(-8, -3); ctx.lineTo(-8, 3); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-32, 0); ctx.stroke();
+  ctx.fillStyle = '#555';
+  for (let i = 0; i < 4; i++) ctx.fillRect(-28 + i * 5, -2.5, 2, 5);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = stuck ? '#ff4444' : 'rgba(255,200,80,0.9)';
+  ctx.beginPath(); ctx.moveTo(-32, 0); ctx.lineTo(-46, -12); ctx.lineTo(-40, 0); ctx.lineTo(-46, 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.beginPath(); ctx.moveTo(-32, 0); ctx.lineTo(-42, -6); ctx.lineTo(-38, 0); ctx.lineTo(-42, 6); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  // Wall
+  const wg = ctx.createRadialGradient(CX, CY - 20, 30, CX, CY, 500);
+  wg.addColorStop(0, '#1a1a2e'); wg.addColorStop(0.6, '#0d0d18'); wg.addColorStop(1, '#08080c');
+  ctx.fillStyle = wg; ctx.fillRect(0, 0, W, H);
+  // Wall panels
+  ctx.strokeStyle = 'rgba(255,255,255,0.015)'; ctx.lineWidth = 1;
+  for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  for (let x = 0; x < W; x += 120) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  // Spotlight
+  const spGrad = ctx.createRadialGradient(CX, CY - 80, 20, CX, CY, 350);
+  spGrad.addColorStop(0, 'rgba(255,255,220,0.06)');
+  spGrad.addColorStop(0.5, 'rgba(255,255,220,0.02)');
+  spGrad.addColorStop(1, 'rgba(255,255,220,0)');
+  ctx.fillStyle = spGrad; ctx.beginPath();
+  ctx.moveTo(CX - 200, 0); ctx.lineTo(CX + 200, 0); ctx.lineTo(CX + 350, H); ctx.lineTo(CX - 350, H); ctx.closePath(); ctx.fill();
+  // Scoreboard
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  roundRect(28, 80, 140, 220, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.font = "bold 12px 'Segoe UI', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('RONDAS', 98, 104);
+  ctx.font = "11px 'Segoe UI', sans-serif";
+  for (let i = 0; i < roundHistory.length && i < 10; i++) {
+    const rh = roundHistory[i];
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'left'; ctx.fillText(`#${rh.n}`, 40, 130 + i * 19);
+    ctx.textAlign = 'right'; ctx.fillText(`${rh.score}`, 156, 130 + i * 19);
+  }
+  if (roundHistory.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.textAlign = 'center'; ctx.fillText('—', 98, 180);
+  }
+  // Board
+  drawBoard();
+  // Thrown darts
+  for (const d of thrown) drawDart(d.x, d.y, true, d.pts);
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // Float texts
+  for (let i = floatTexts.length - 1; i >= 0; i--) {
+    const ft = floatTexts[i]; ft.y += ft.vy; ft.life -= 0.015;
+    if (ft.life <= 0) { floatTexts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.min(1, ft.life * 2); ctx.fillStyle = ft.color;
+    ctx.font = `bold ${ft.size}px 'Segoe UI', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 5;
+    ctx.fillText(ft.text, ft.x, ft.y); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  // Flying dart
+  if (animDart) {
+    animDart.progress += 0.06;
+    if (animDart.progress >= 1) { animDart.progress = 1; finishThrow(); return; }
+    const t = animDart.progress;
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    const cx = animDart.fromX + (animDart.toX - animDart.fromX) * ease;
+    const arc = Math.sin(t * Math.PI) * -35;
+    const cy = animDart.fromY + (animDart.toY - animDart.fromY) * ease + arc;
+    drawDart(cx, cy, false, 0);
+    ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - t)})`; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let s = 0; s <= 10; s++) {
+      const st = s / 10; const se = st < 0.5 ? 2 * st * st : -1 + (4 - 2 * st) * st;
+      const sx = animDart.fromX + (animDart.toX - animDart.fromX) * se;
+      const sy = animDart.fromY + (animDart.toY - animDart.fromY) * se + Math.sin(st * Math.PI) * -35;
+      s === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+  // Aim + trajectory preview
+  if (!gameOver && dartsLeft > 0 && !animDart) {
+    const pts = getScore(aimX, aimY);
+    // Trajectory preview
+    ctx.strokeStyle = 'rgba(255,200,100,0.08)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
+    ctx.beginPath(); ctx.moveTo(aimX, HAND_Y);
+    for (let s = 1; s <= 20; s++) {
+      const st = s / 20; const se = st < 0.5 ? 2 * st * st : -1 + (4 - 2 * st) * st;
+      const sx = aimX + (aimX - aimX) * se;
+      const sy = HAND_Y + (aimY - HAND_Y) * se + Math.sin(st * Math.PI) * -35;
+      ctx.lineTo(sx + (aimX - aimX) * se, sy);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    // Hand dot
+    ctx.fillStyle = 'rgba(255,200,100,0.25)';
+    ctx.beginPath(); ctx.arc(aimX, HAND_Y, 8, 0, Math.PI * 2); ctx.fill();
+    // Target
+    ctx.shadowColor = 'rgba(100,200,255,0.4)'; ctx.shadowBlur = 12;
+    ctx.strokeStyle = pts > 0 ? 'rgba(100,200,255,0.4)' : 'rgba(255,80,80,0.3)';
+    ctx.lineWidth = 1.5;
+    const cs = 12; ctx.beginPath();
+    ctx.moveTo(aimX - cs, aimY); ctx.lineTo(aimX + cs, aimY);
+    ctx.moveTo(aimX, aimY - cs); ctx.lineTo(aimX, aimY + cs);
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = pts > 0 ? 'rgba(100,200,255,0.12)' : 'rgba(255,80,80,0.1)';
+    ctx.beginPath(); ctx.arc(aimX, aimY, 6, 0, Math.PI * 2); ctx.stroke();
+    // Preview score
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    const pLabel = pts > 0 ? `${pts}pts` : '0';
+    roundRect(aimX - 22, aimY + 18, 44, 20, 6); ctx.fill();
+    ctx.fillStyle = pts >= 50 ? '#ffd700' : pts >= 40 ? '#3ae65a' : pts > 0 ? '#fff' : '#888';
+    ctx.font = "bold 11px 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(pLabel, aimX, aimY + 28);
+  }
+  // Bottom bar
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  roundRect(CX - 80, H - 38, 160, 26, 10); ctx.fill();
+  ctx.fillStyle = '#3ae65a';
+  ctx.font = "bold 16px 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`🎯 ${score} pts`, CX, H - 25);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function loop() { draw(); requestAnimationFrame(loop); }
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  aimX = Math.max(0, Math.min(W, (e.clientX - rect.left) * sx));
+  aimY = Math.max(0, Math.min(H, (e.clientY - rect.top) * sy));
+});
+canvas.addEventListener('click', () => { if (!gameOver) throwDart(); });
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault(); if (gameOver) return;
+  const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  aimX = Math.max(0, Math.min(W, (t.clientX - rect.left) * sx));
+  aimY = Math.max(0, Math.min(H, (t.clientY - rect.top) * sy));
+  throwDart();
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  aimX = Math.max(0, Math.min(W, (t.clientX - rect.left) * sx));
+  aimY = Math.max(0, Math.min(H, (t.clientY - rect.top) * sy));
+}, { passive: false });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; }
+  if (e.key === 'r' || e.key === 'R') { init(); }
+  if ((e.key === ' ' || e.key === 'Space') && !gameOver) { e.preventDefault(); throwDart(); }
+});
+document.getElementById('againBtn').addEventListener('click', () => { initAudio(); init(); });
+document.addEventListener('click', () => initAudio(), { once: true });
+
+init();
+loop();
+</script>
+</body>
+</html>

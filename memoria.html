@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🧩 Memoria</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body {
+  background: #0a0a12;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif; color: #fff;
+}
+#menuLink {
+  position: absolute; top: 16px; left: 16px;
+  padding: 8px 18px; border: none; border-radius: 30px;
+  background: rgba(255,255,255,0.08); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; z-index: 5;
+  text-decoration: none; transition: background 0.15s;
+}
+#menuLink:hover { background: rgba(255,255,255,0.18); }
+#app { width: min(98vw, 820px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.head { display: flex; width: 100%; gap: 10px; }
+.scorebox {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1;
+}
+.scorebox .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.scorebox .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.scorebox.best .v { color: #ff6b9d; }
+#boardWrap { position: relative; width: 100%; }
+canvas {
+  display: block; width: 100%; height: auto; touch-action: none; border-radius: 16px;
+  max-width: 98vw; max-height: 86vh;
+}
+#overlay {
+  position: absolute; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(8,8,20,0.85); border-radius: 16px; backdrop-filter: blur(4px);
+  text-align: center; z-index: 3;
+}
+#overlay h2 { font-size: 38px; letter-spacing: 2px; color: #ff6b9d; }
+#overlay p { font-size: 15px; color: rgba(255,255,255,0.5); }
+#overlay .final { font-size: 26px; color: #fff; font-weight: 700; margin-top: 4px; }
+#overlay .btns { display: flex; gap: 10px; margin-top: 6px; }
+#overlay button {
+  padding: 11px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: transform 0.12s;
+}
+#overlay button:hover { transform: scale(1.04); }
+#againBtn { background: #ff6b9d; color: #0a0a12; }
+.hint { font-size: 12px; color: rgba(255,255,255,0.22); text-align: center; width: 100%; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<div id="app">
+  <div class="head">
+    <div class="scorebox"><div class="lbl">intentos</div><div class="v" id="movesDisplay">0</div></div>
+    <div class="scorebox"><div class="lbl">pares</div><div class="v" id="matchDisplay">0/8</div></div>
+    <div class="scorebox best"><div class="lbl">récord</div><div class="v" id="bestDisplay">—</div></div>
+  </div>
+  <div id="boardWrap">
+    <canvas id="c" width="600" height="600"></canvas>
+    <div id="overlay">
+      <h2>🧩 ¡Completaste!</h2>
+      <p id="ovSub">encontraste todos los pares</p>
+      <div class="final" id="ovFinal"></div>
+      <div class="btns"><button id="againBtn">jugar de nuevo</button></div>
+    </div>
+  </div>
+  <div class="hint">hacé clic en las cartas para destaparlas · R reinicia · Escape menú</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 600, H = 600;
+
+const COLS = 4, ROWS = 4;
+const CARD_W = 110, CARD_H = 130;
+const GAP = 16;
+const GRID_W = COLS * CARD_W + (COLS - 1) * GAP;
+const GRID_H = ROWS * CARD_H + (ROWS - 1) * GAP;
+const OFF_X = (W - GRID_W) / 2;
+const OFF_Y = (H - GRID_H) / 2;
+
+const SYMBOLS = ['🍎','🍋','🍊','🍇','🍓','🍒','🍑','🍍'];
+
+let cards = [];
+let flipped = [];
+let matched = 0;
+let moves = 0;
+let locked = false;
+let best = null;
+let gameOver = false;
+let animating = false;
+
+let actx;
+function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(f, d, t = 'sine', v = 0.05) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = t; o.frequency.value = f;
+  g.gain.setValueAtTime(v, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+  o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+}
+function sfxFlip() { tone(400, 0.05, 'triangle', 0.03); }
+function sfxMatch() { tone(660, 0.08, 'sine', 0.04); setTimeout(() => tone(880, 0.1, 'sine', 0.04), 60); }
+function sfxFail() { tone(250, 0.1, 'triangle', 0.03); }
+function sfxWin() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'sine',0.05), i*90)); }
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function init() {
+  const pairs = [...SYMBOLS, ...SYMBOLS];
+  cards = shuffle(pairs).map((sym, i) => ({
+    sym,
+    col: i % COLS,
+    row: Math.floor(i / COLS),
+    flipped: false,
+    matched: false,
+    flipAnim: 0,
+  }));
+  flipped = [];
+  matched = 0;
+  moves = 0;
+  locked = false;
+  gameOver = false;
+  const stored = parseInt(localStorage.getItem('memoriaBest') || '', 10);
+  best = isNaN(stored) ? null : stored;
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('movesDisplay').textContent = '0';
+  document.getElementById('matchDisplay').textContent = '0/8';
+  document.getElementById('bestDisplay').textContent = best == null ? '—' : best;
+}
+
+function cardRect(card) {
+  const x = OFF_X + card.col * (CARD_W + GAP);
+  const y = OFF_Y + card.row * (CARD_H + GAP);
+  return { x, y };
+}
+
+function getCardAt(mx, my) {
+  for (const card of cards) {
+    if (card.matched) continue;
+    const r = cardRect(card);
+    if (mx >= r.x && mx <= r.x + CARD_W && my >= r.y && my <= r.y + CARD_H) {
+      return card;
+    }
+  }
+  return null;
+}
+
+function flipCard(card) {
+  if (locked || card.flipped || card.matched || gameOver) return;
+  initAudio();
+  card.flipped = true;
+  card.flipAnim = 0;
+  sfxFlip();
+  flipped.push(card);
+  if (flipped.length === 2) {
+    moves++;
+    document.getElementById('movesDisplay').textContent = moves;
+    locked = true;
+    setTimeout(checkMatch, 700);
+  }
+}
+
+function checkMatch() {
+  const [a, b] = flipped;
+  if (a.sym === b.sym) {
+    a.matched = true;
+    b.matched = true;
+    matched++;
+    document.getElementById('matchDisplay').textContent = `${matched}/8`;
+    sfxMatch();
+    flipped = [];
+    locked = false;
+    if (matched === 8) {
+      gameOver = true;
+      setTimeout(() => showWin(), 500);
+    }
+  } else {
+    sfxFail();
+    setTimeout(() => {
+      a.flipped = false;
+      b.flipped = false;
+      flipped = [];
+      locked = false;
+    }, 300);
+  }
+}
+
+function showWin() {
+  sfxWin();
+  const record = best == null || moves < best;
+  if (record) {
+    best = moves;
+    localStorage.setItem('memoriaBest', best.toString());
+  }
+  document.getElementById('ovSub').textContent = `lo lograste en ${moves} intentos`;
+  document.getElementById('ovFinal').textContent = record ? `🎉 ¡nuevo récord: ${moves}!` : `${moves} intentos`;
+  document.getElementById('bestDisplay').textContent = best;
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle pattern
+  ctx.fillStyle = 'rgba(255,255,255,0.015)';
+  for (let i = 0; i < 12; i++) {
+    const cx = Math.random() * W, cy = Math.random() * H;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.random() * 40 + 10, 0, Math.PI * 2); ctx.fill();
+  }
+
+  for (const card of cards) {
+    const r = cardRect(card);
+    const x = r.x, y = r.y;
+    const isFaceUp = card.flipped || card.matched;
+    const scaleX = isFaceUp ? 1 : 1;
+
+    // Card shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    roundRect(x + 3, y + 4, CARD_W, CARD_H, 10); ctx.fill();
+
+    if (card.matched) {
+      ctx.fillStyle = 'rgba(255,107,157,0.15)';
+      roundRect(x - 3, y - 3, CARD_W + 6, CARD_H + 6, 12); ctx.fill();
+    }
+
+    // Card body
+    if (isFaceUp) {
+      ctx.fillStyle = card.matched ? '#1a1420' : '#1a1a2e';
+      roundRect(x, y, CARD_W, CARD_H, 10); ctx.fill();
+      ctx.strokeStyle = card.matched ? 'rgba(255,107,157,0.3)' : 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1.5;
+      roundRect(x, y, CARD_W, CARD_H, 10); ctx.stroke();
+      // Symbol
+      ctx.fillStyle = card.matched ? 'rgba(255,255,255,0.5)' : '#fff';
+      ctx.font = "44px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI', system-ui, sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(card.sym, x + CARD_W / 2, y + CARD_H / 2);
+      // Glow for matched
+      if (card.matched) {
+        ctx.shadowColor = '#ff6b9d'; ctx.shadowBlur = 15;
+        ctx.fillText(card.sym, x + CARD_W / 2, y + CARD_H / 2);
+        ctx.shadowBlur = 0;
+      }
+    } else {
+      // Face down
+      const grad = ctx.createLinearGradient(x, y, x + CARD_W, y + CARD_H);
+      grad.addColorStop(0, '#ff6b9d'); grad.addColorStop(0.3, '#d4507a'); grad.addColorStop(1, '#a0305a');
+      ctx.fillStyle = grad;
+      roundRect(x, y, CARD_W, CARD_H, 10); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+      roundRect(x, y, CARD_W, CARD_H, 10); ctx.stroke();
+      // Pattern
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(x + CARD_W / 2, y + CARD_H / 2, 20 + i * 10, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1; ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.font = "32px 'Segoe UI', system-ui, sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('?', x + CARD_W / 2, y + CARD_H / 2 + 2);
+    }
+  }
+}
+
+function loop() {
+  draw();
+  requestAnimationFrame(loop);
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width, scaleY = H / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const card = getCardAt(mx, my);
+  if (card) flipCard(card);
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width, scaleY = H / rect.height;
+  const mx = (touch.clientX - rect.left) * scaleX;
+  const my = (touch.clientY - rect.top) * scaleY;
+  const card = getCardAt(mx, my);
+  if (card) flipCard(card);
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; }
+  if (e.key === 'r' || e.key === 'R') { init(); }
+});
+
+document.getElementById('againBtn').addEventListener('click', () => { initAudio(); init(); });
+document.addEventListener('click', () => initAudio(), { once: true });
+
+init();
+loop();
+</script>
+</body>
+</html>

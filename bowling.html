@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎳 Bowling</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body {
+  background: #080814;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif; color: #fff;
+}
+#menuLink {
+  position: absolute; top: 16px; left: 16px;
+  padding: 8px 18px; border: none; border-radius: 30px;
+  background: rgba(255,255,255,0.08); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; z-index: 5;
+  text-decoration: none; transition: background 0.15s;
+}
+#menuLink:hover { background: rgba(255,255,255,0.18); }
+#app { width: min(98vw, 1100px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.head { display: flex; width: 100%; gap: 10px; }
+.scorebox {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1;
+}
+.scorebox .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.scorebox .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.scorebox.best .v { color: #6b8cff; }
+#boardWrap { position: relative; width: 100%; }
+canvas {
+  display: block; width: 100%; height: auto; touch-action: none; border-radius: 16px;
+  max-width: 98vw; max-height: 86vh;
+}
+#resultMsg {
+  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+  font-size: 18px; font-weight: 700; text-align: center;
+  pointer-events: none; z-index: 2; min-height: 28px;
+  background: rgba(0,0,0,0.6); padding: 8px 24px; border-radius: 30px;
+  color: rgba(255,255,255,0.5);
+}
+#resultMsg.win { color: #6b8cff; }
+#resultMsg.strike { color: #ffd700; font-size: 22px; }
+#resultMsg.gutter { color: #ff5d8a; }
+#overlay {
+  position: absolute; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(8,8,20,0.85); border-radius: 16px; backdrop-filter: blur(4px);
+  text-align: center; z-index: 3;
+}
+#overlay h2 { font-size: 40px; letter-spacing: 2px; }
+#overlay p { font-size: 15px; color: rgba(255,255,255,0.5); }
+#overlay .final { font-size: 26px; color: #6b8cff; font-weight: 700; margin-top: 4px; }
+#overlay .btns { display: flex; gap: 10px; margin-top: 6px; }
+#overlay button {
+  padding: 11px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: transform 0.12s;
+}
+#overlay button:hover { transform: scale(1.04); }
+#againBtn { background: #6b8cff; color: #080814; }
+.controls {
+  display: flex; width: 100%; justify-content: space-between; gap: 12px;
+  font-size: 12px; color: rgba(255,255,255,0.22); flex-wrap: wrap;
+}
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<div id="app">
+  <div class="head">
+    <div class="scorebox"><div class="lbl">frame</div><div class="v" id="frameDisplay">1/10</div></div>
+    <div class="scorebox"><div class="lbl">tiro</div><div class="v" id="throwDisplay">1</div></div>
+    <div class="scorebox"><div class="lbl">pinos</div><div class="v" id="pinsDisplay">—</div></div>
+    <div class="scorebox"><div class="lbl">total</div><div class="v" id="scoreDisplay">0</div></div>
+    <div class="scorebox best"><div class="lbl">récord</div><div class="v" id="bestDisplay">0</div></div>
+  </div>
+  <div id="boardWrap">
+    <canvas id="c" width="1000" height="650"></canvas>
+    <div id="resultMsg">🎳 apuntá y lanzá</div>
+    <div id="overlay">
+      <h2 id="ovTitle">🎳 PARTIDA COMPLETA</h2>
+      <p id="ovSub">¡terminaste las 10 frames!</p>
+      <div class="final" id="ovFinal"></div>
+      <div class="btns"><button id="againBtn">jugar de nuevo</button></div>
+    </div>
+  </div>
+  <div class="controls">
+    <span>← → o mouse para apuntar</span>
+    <span>Espacio · click: mantener para carga, soltar para lanzar</span>
+    <span>R reinicia · Escape menú</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1000, H = 650;
+
+const LANE_L = 260, LANE_R = 740, LANE_W = LANE_R - LANE_L;
+const LANE_TOP = 90, LANE_BOT = 560;
+const BALL_R = 16, PIN_R = 9;
+const CENTER_X = (LANE_L + LANE_R) / 2;
+
+let pins = [];
+let ballX = CENTER_X;
+let ballY = LANE_BOT - 40;
+let ballSpeed = 0;
+let power = 0;
+let charging = false;
+
+let state = 'aim'; // aim | charge | throw | settle | done
+let frame = 1;
+let throwInFrame = 1;
+let framePins = []; // pins knocked per frame: [{t1,t2}]
+let totalScore = 0;
+let best = 0;
+let settleTimer = 0;
+let resultText = '🎳 apuntá y lanzá';
+let resultClass = '';
+
+const PIN_POSITIONS = [
+  // row 4 (back)
+  { x: CENTER_X - 72, y: 125 },
+  { x: CENTER_X - 24, y: 125 },
+  { x: CENTER_X + 24, y: 125 },
+  { x: CENTER_X + 72, y: 125 },
+  // row 3
+  { x: CENTER_X - 48, y: 165 },
+  { x: CENTER_X, y: 165 },
+  { x: CENTER_X + 48, y: 165 },
+  // row 2
+  { x: CENTER_X - 24, y: 205 },
+  { x: CENTER_X + 24, y: 205 },
+  // row 1 (head)
+  { x: CENTER_X, y: 245 },
+];
+
+// Audio
+let actx;
+function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(f, d, t = 'sine', v = 0.05) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = t; o.frequency.value = f;
+  g.gain.setValueAtTime(v, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+  o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+}
+function sfxRoll() { tone(180, 0.3, 'sine', 0.02); }
+function sfxHit() { tone(500, 0.06, 'square', 0.03); setTimeout(() => tone(400, 0.08, 'square', 0.02), 30); }
+function sfxStrike() {
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'square',0.05), i*80));
+}
+function sfxSpare() {
+  [440,554,659].forEach((f,i)=>setTimeout(()=>tone(f,0.1,'square',0.04), i*70));
+}
+function sfxGutter() { tone(150, 0.2, 'sawtooth', 0.03); }
+function sfxGameOver() { [392,330,262,196].forEach((f,i)=>setTimeout(()=>tone(f,0.15,'sawtooth',0.04), i*100)); }
+
+function resetPins() {
+  pins = PIN_POSITIONS.map(p => ({
+    x: p.x, y: p.y, origX: p.x, origY: p.y,
+    hit: false, vx: 0, vy: 0, off: false
+  }));
+}
+
+function getStanding() { return pins.filter(p => !p.hit && !p.off); }
+function getHit() { return pins.filter(p => p.hit && !p.off); }
+
+function updateUI() {
+  document.getElementById('frameDisplay').textContent = `${frame}/10`;
+  document.getElementById('throwDisplay').textContent = throwInFrame;
+  const fp = framePins[frame - 1] || { t1: 0, t2: 0 };
+  const sum = (fp.t1 || 0) + (fp.t2 || 0);
+  document.getElementById('pinsDisplay').textContent = sum || '—';
+  document.getElementById('scoreDisplay').textContent = totalScore;
+  document.getElementById('bestDisplay').textContent = best;
+}
+
+function startCharge() {
+  if (state !== 'aim') return;
+  initAudio();
+  state = 'charge';
+  power = 0;
+}
+
+function releaseThrow() {
+  if (state !== 'charge') return;
+  state = 'throw';
+  const minSpeed = 4;
+  const maxSpeed = 12;
+  ballSpeed = minSpeed + power * (maxSpeed - minSpeed);
+  ballY = LANE_BOT - 40;
+  chargerPercent = 0;
+  sfxRoll();
+}
+
+// Check if the ball is over a pin position
+function checkCollisions() {
+  for (const pin of pins) {
+    if (pin.hit || pin.off) continue;
+    const dx = ballX - pin.x;
+    const dy = ballY - pin.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < BALL_R + PIN_R) {
+      pin.hit = true;
+      const angle = Math.atan2(dy, dx);
+      pin.vx = Math.cos(angle) * (2 + Math.random() * 3);
+      pin.vy = Math.sin(angle) * (2 + Math.random() * 3) - 1;
+      sfxHit();
+    }
+  }
+}
+
+function isInGutter() {
+  return ballX - BALL_R < LANE_L || ballX + BALL_R > LANE_R;
+}
+
+function finishThrow() {
+  const standing = getStanding().length;
+  const fallen = 10 - standing;
+  const fp = framePins[frame - 1] || { t1: 0, t2: 0 };
+
+  if (fallen === 0 && isInGutter()) {
+    resultText = '😔 canalete…';
+    resultClass = 'gutter';
+    sfxGutter();
+  } else if (throwInFrame === 1 && fallen === 10) {
+    resultText = '🔥 ¡STRIKE!';
+    resultClass = 'strike';
+    sfxStrike();
+  } else if (throwInFrame === 2 && fp.t1 + fallen === 10) {
+    resultText = '✨ ¡SPARE!';
+    resultClass = 'strike';
+    sfxSpare();
+  } else {
+    resultText = `caíste ${fallen} ${fallen === 1 ? 'pino' : 'pinos'}`;
+    resultClass = fallen >= 7 ? 'win' : '';
+  }
+
+  // Record throw
+  if (!framePins[frame - 1]) framePins[frame - 1] = { t1: 0, t2: 0 };
+  framePins[frame - 1][`t${throwInFrame}`] = fallen;
+
+  totalScore = framePins.reduce((s, f) => s + (f.t1 || 0) + (f.t2 || 0), 0);
+  if (totalScore > best) {
+    best = totalScore;
+    localStorage.setItem('bowlingBest', best.toString());
+  }
+
+  updateUI();
+
+  // Advance
+  if (throwInFrame === 1 && fallen === 10) {
+    // Strike: skip to next frame
+    if (frame >= 10) {
+      state = 'done';
+      setTimeout(() => showGameOver(), 600);
+    } else {
+      state = 'settle';
+      settleTimer = 60;
+      nextFrame = true;
+    }
+  } else if (throwInFrame === 2) {
+    if (frame >= 10) {
+      state = 'done';
+      setTimeout(() => showGameOver(), 600);
+    } else {
+      state = 'settle';
+      settleTimer = 60;
+      nextFrame = true;
+    }
+  } else {
+    throwInFrame = 2;
+    state = 'settle';
+    settleTimer = 50;
+    nextFrame = false;
+  }
+}
+
+let nextFrame = false;
+let chargerPercent = 0;
+
+function showGameOver() {
+  document.getElementById('ovTitle').textContent = '🎳 PARTIDA COMPLETA';
+  document.getElementById('ovSub').textContent = `total: ${totalScore} pinos`;
+  document.getElementById('ovFinal').textContent = `récord: ${best} pinos`;
+  document.getElementById('overlay').style.display = 'flex';
+  sfxGameOver();
+}
+
+function init() {
+  frame = 1;
+  throwInFrame = 1;
+  framePins = [];
+  totalScore = 0;
+  state = 'aim';
+  ballX = CENTER_X;
+  ballY = LANE_BOT - 40;
+  ballSpeed = 0;
+  power = 0;
+  charging = false;
+  nextFrame = false;
+  resultText = '🎳 apuntá y lanzá';
+  resultClass = '';
+  best = parseInt(localStorage.getItem('bowlingBest') || '0', 10);
+  document.getElementById('overlay').style.display = 'none';
+  resetPins();
+  updateUI();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0c0c1e'); grad.addColorStop(0.5, '#080814'); grad.addColorStop(1, '#0c0c1e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Lane
+  ctx.fillStyle = '#1a1814';
+  ctx.fillRect(LANE_L, LANE_TOP, LANE_W, LANE_BOT - LANE_TOP);
+
+  // Lane wood lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+  ctx.lineWidth = 1;
+  for (let x = LANE_L + 30; x < LANE_R; x += 30) {
+    ctx.beginPath(); ctx.moveTo(x, LANE_TOP); ctx.lineTo(x, LANE_BOT); ctx.stroke();
+  }
+
+  // Lane border/rails
+  ctx.fillStyle = '#22202a';
+  ctx.fillRect(LANE_L - 8, LANE_TOP, 8, LANE_BOT - LANE_TOP);
+  ctx.fillRect(LANE_R, LANE_TOP, 8, LANE_BOT - LANE_TOP);
+
+  // Gutter indicators
+  ctx.fillStyle = 'rgba(255,255,255,0.02)';
+  ctx.fillRect(0, LANE_TOP, LANE_L - 8, LANE_BOT - LANE_TOP);
+  ctx.fillRect(LANE_R + 8, LANE_TOP, W - LANE_R - 8, LANE_BOT - LANE_TOP);
+
+  // Arrow markers on lane
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.arc(CENTER_X + i * 40, LANE_BOT - 140, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Pin area background
+  ctx.fillStyle = 'rgba(255,255,255,0.02)';
+  ctx.fillRect(LANE_L + 20, LANE_TOP + 10, LANE_W - 40, 200);
+
+  // Pins
+  for (const pin of pins) {
+    if (pin.off) continue;
+    const px = pin.x + pin.vx;
+    const py = pin.y + pin.vy;
+    pin.x = px;
+    pin.y = py;
+    if (pin.hit) {
+      pin.vx *= 0.96;
+      pin.vy += 0.05;
+      if (py > LANE_BOT + 50 || px < LANE_L - 50 || px > LANE_R + 50) {
+        pin.off = true;
+        continue;
+      }
+    }
+    // Draw pin body
+    const alpha = pin.hit ? 0.6 : 1;
+    ctx.globalAlpha = alpha;
+    // Pin body (tapered cylinder)
+    const py2 = pin.y - 22;
+    ctx.fillStyle = '#e8e0d0';
+    ctx.beginPath();
+    ctx.ellipse(pin.x, pin.y, 6, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(pin.x - 5, pin.y - 20, 10, 20);
+    ctx.fillStyle = '#f5f0e8';
+    ctx.beginPath();
+    ctx.ellipse(pin.x, pin.y - 21, 4, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Red stripe
+    ctx.fillStyle = '#cc3344';
+    ctx.fillRect(pin.x - 5, pin.y - 12, 10, 4);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(pin.x - 2, pin.y - 20, 2, 18);
+    ctx.globalAlpha = 1;
+  }
+
+  // Power bar (right side)
+  const pbX = 880, pbY = 150, pbW = 28, pbH = 280;
+  ctx.fillStyle = '#111120';
+  roundRect(pbX, pbY, pbW, pbH, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  roundRect(pbX, pbY, pbW, pbH, 8); ctx.stroke();
+
+  if (state === 'charge') {
+    const fillH = pbH * power;
+    const grad2 = ctx.createLinearGradient(0, pbY + pbH, 0, pbY);
+    grad2.addColorStop(0, '#4aff6b'); grad2.addColorStop(0.5, '#ffd700'); grad2.addColorStop(1, '#ff5d8a');
+    ctx.fillStyle = grad2;
+    roundRect(pbX + 3, pbY + pbH - fillH + 3, pbW - 6, fillH - 6, 6); ctx.fill();
+  }
+
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = "10px 'Segoe UI', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.fillText('POTENCIA', pbX + pbW / 2, pbY - 8);
+
+  // Ball
+  const bOff = 3;
+  ctx.shadowColor = '#6b8cff';
+  ctx.shadowBlur = ballSpeed > 0 ? 30 : 10;
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(ballX, ballY, BALL_R, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a2a4e';
+  ctx.beginPath(); ctx.arc(ballX - 3, ballY - 3, BALL_R - 4, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Finger holes
+  ctx.fillStyle = '#0a0a18';
+  ctx.beginPath(); ctx.arc(ballX - 5, ballY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ballX + 5, ballY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ballX, ballY + 5, 2.5, 0, Math.PI * 2); ctx.fill();
+
+  // Aim guide (dotted line)
+  if (state === 'aim' || state === 'charge') {
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = 'rgba(107,140,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ballX, ballY - BALL_R);
+    ctx.lineTo(ballX, LANE_TOP + 30);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Result message
+  document.getElementById('resultMsg').textContent = resultText;
+  document.getElementById('resultMsg').className = resultClass;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function update() {
+  if (state === 'charge') {
+    chargerPercent += 0.012;
+    if (chargerPercent > 1) chargerPercent = 1;
+    power = chargerPercent;
+    // Oscillate slightly at high power
+    power = Math.min(1, chargerPercent + Math.sin(chargerPercent * 20) * 0.04);
+  }
+
+  if (state === 'throw') {
+    ballY -= ballSpeed;
+    ballSpeed *= 0.995;
+    // Slight curve based on angle from center
+    const drift = (ballX - CENTER_X) * 0.001;
+    ballX += drift;
+
+    // Check if in gutter
+    if (ballX - BALL_R < LANE_L) { ballX = LANE_L + BALL_R; }
+    if (ballX + BALL_R > LANE_R) { ballX = LANE_R - BALL_R; }
+
+    // Collision detection in pin area
+    if (ballY < LANE_TOP + 270) {
+      checkCollisions();
+    }
+
+    // Ball passed the pins or went past top
+    if (ballY < LANE_TOP - 30) {
+      finishThrow();
+    }
+
+    // Ball went off bottom somehow
+    if (ballY > LANE_BOT + 50) {
+      finishThrow();
+    }
+  }
+
+  if (state === 'settle') {
+    settleTimer--;
+    if (settleTimer <= 0) {
+      if (nextFrame) {
+        frame++;
+        throwInFrame = 1;
+        resetPins();
+      }
+      state = 'aim';
+      ballX = CENTER_X;
+      ballY = LANE_BOT - 40;
+      resultText = '🎳 apuntá y lanzá';
+      resultClass = '';
+      updateUI();
+    }
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  if (e.key === 'r' || e.key === 'R') { init(); return; }
+
+  if (state === 'aim') {
+    if (e.key === 'ArrowLeft') { ballX = Math.max(LANE_L + BALL_R + 20, ballX - 8); }
+    if (e.key === 'ArrowRight') { ballX = Math.min(LANE_R - BALL_R - 20, ballX + 8); }
+  }
+
+  if ((e.key === ' ' || e.key === 'Space') && (state === 'aim' || state === 'charge')) {
+    e.preventDefault();
+    if (state === 'aim') startCharge();
+  }
+});
+
+document.addEventListener('keyup', e => {
+  if ((e.key === ' ' || e.key === 'Space') && state === 'charge') {
+    releaseThrow();
+  }
+});
+
+// Mouse
+canvas.addEventListener('mousemove', e => {
+  if (state !== 'aim') return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const mx = (e.clientX - rect.left) * scaleX;
+  ballX = Math.max(LANE_L + BALL_R + 20, Math.min(LANE_R - BALL_R - 20, mx));
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (state === 'aim') startCharge();
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (state === 'charge') releaseThrow();
+});
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const mx = (touch.clientX - rect.left) * scaleX;
+  if (state === 'aim') {
+    ballX = Math.max(LANE_L + BALL_R + 20, Math.min(LANE_R - BALL_R - 20, mx));
+    startCharge();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (state === 'charge') return; // don't move during charge
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const mx = (touch.clientX - rect.left) * scaleX;
+  if (state === 'aim') {
+    ballX = Math.max(LANE_L + BALL_R + 20, Math.min(LANE_R - BALL_R - 20, mx));
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  if (state === 'charge') releaseThrow();
+});
+
+document.getElementById('againBtn').addEventListener('click', () => { initAudio(); init(); });
+document.addEventListener('click', () => initAudio(), { once: true });
+
+init();
+loop();
+</script>
+</body>
+</html>

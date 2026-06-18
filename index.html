@@ -57,7 +57,7 @@
 
   /* ---- Stats ---- */
   .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid;     grid-template-columns: repeat(4, 1fr);
     gap: 1px; background: var(--line); border: 1px solid var(--line);
     border-radius: 16px; overflow: hidden; margin-top: clamp(30px, 5vw, 46px);
   }
@@ -67,9 +67,16 @@
   .stat .l { font-size: 12px; letter-spacing: 0.06em; color: var(--mut); margin-top: 8px; text-transform: uppercase; }
 
   /* ---- Section label ---- */
-  .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: clamp(40px, 6vw, 64px) 0 22px; gap: 16px; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: clamp(40px, 6vw, 64px) 0 22px; gap: 16px; flex-wrap: wrap; }
   .sec-head h2 { font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   .sec-head .count { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--mut2); }
+  #search {
+    width: 100%; margin: 0 0 22px; padding: 10px 16px; border: none; border-radius: 30px;
+    background: var(--card); color: var(--txt); font-size: 14px; font-family: inherit;
+    outline: 1px solid var(--line); transition: outline .18s;
+  }
+  #search:focus { outline-color: var(--gold); }
+  #search::placeholder { color: var(--mut2); }
 
   /* ---- Grid ---- */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; }
@@ -141,7 +148,6 @@
 
   @media (max-width: 540px) {
     .stats { grid-template-columns: 1fr 1fr; }
-    .stats .stat:last-child { grid-column: 1 / -1; }
   }
 </style>
 </head>
@@ -156,6 +162,7 @@
       <div class="stat"><div class="n" id="st-games">9</div><div class="l">juegos</div></div>
       <div class="stat"><div class="n gold" id="st-total">0</div><div class="l">puntos acumulados</div></div>
       <div class="stat"><div class="n" id="st-records">0</div><div class="l">récords logrados</div></div>
+      <div class="stat"><div class="n gold" id="st-visits">0</div><div class="l">visitas</div></div>
     </div>
   </header>
 
@@ -163,6 +170,7 @@
     <h2>Elegí tu juego</h2>
     <span class="count" id="sec-count">09 títulos</span>
   </div>
+  <input id="search" type="text" placeholder="🔍 buscar juego…" autocomplete="off">
 
   <div class="grid" id="grid"></div>
 
@@ -202,36 +210,37 @@
   }
 
   const grid = document.getElementById('grid');
-  let total = 0, records = 0;
+  const search = document.getElementById('search');
 
+  let totalScore = 0, totalRecords = 0;
   for (const g of GAMES) {
     const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
-    if (g.fmt !== 'wins') total += raw;
-    if (raw > 0) records++;
-
-    const tagHtml = g.tag
-      ? `<span class="tag ${g.tag === 'nuevo' ? 'new' : ''}">${g.tag}</span>`
-      : '';
-    const bestVal = raw > 0
-      ? `<span class="v">${fmt(raw, g.fmt)}</span>`
-      : `<span class="v empty">sin marca</span>`;
-    const bestLbl = g.fmt === 'wins' ? 'récord' : 'tu récord';
-
-    const a = document.createElement('a');
-    a.className = 'card';
-    a.href = g.file;
-    a.style.setProperty('--a', g.a);
-    a.innerHTML = `
-      <div class="top">
-        <div class="icon">${g.icon}</div>
-        ${tagHtml}
-      </div>
-      <h3>${g.name}</h3>
-      <p>${g.desc}</p>
-      <div class="best"><span class="lbl">${bestLbl}</span> ${bestVal}</div>
-      <div class="play">▶</div>`;
-    grid.appendChild(a);
+    if (g.fmt !== 'wins') totalScore += raw;
+    if (raw > 0) totalRecords++;
   }
+
+  function renderGrid(filter) {
+    grid.innerHTML = '';
+    let shown = 0;
+    for (const g of GAMES) {
+      const q = (filter || '').toLowerCase();
+      if (q && !g.name.toLowerCase().includes(q) && !g.desc.toLowerCase().includes(q)) continue;
+      shown++;
+      const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
+      const tagHtml = g.tag ? `<span class="tag ${g.tag === 'nuevo' ? 'new' : ''}">${g.tag}</span>` : '';
+      const bestVal = raw > 0 ? `<span class="v">${fmt(raw, g.fmt)}</span>` : `<span class="v empty">sin marca</span>`;
+      const bestLbl = g.fmt === 'wins' ? 'récord' : 'tu récord';
+      const a = document.createElement('a');
+      a.className = 'card'; a.href = g.file; a.style.setProperty('--a', g.a);
+      a.innerHTML = `<div class="top"><div class="icon">${g.icon}</div>${tagHtml}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="best"><span class="lbl">${bestLbl}</span> ${bestVal}</div><div class="play">▶</div>`;
+      grid.appendChild(a);
+    }
+    document.getElementById('sec-count').textContent = String(shown).padStart(2, '0') + ' título' + (shown !== 1 ? 's' : '');
+  }
+
+  search.addEventListener('input', () => renderGrid(search.value));
+
+  renderGrid();
 
   const animate = (el, to, kind) => {
     const dur = 900, t0 = performance.now();
@@ -245,9 +254,13 @@
   };
 
   document.getElementById('st-games').textContent = GAMES.length;
-  document.getElementById('sec-count').textContent = String(GAMES.length).padStart(2, '0') + ' títulos';
-  animate(document.getElementById('st-total'), total);
-  animate(document.getElementById('st-records'), records, 'plain');
+  animate(document.getElementById('st-total'), totalScore);
+  animate(document.getElementById('st-records'), totalRecords, 'plain');
+
+  fetch('https://api.countapi.xyz/hit/jueguitos/visitas')
+    .then(r => r.json())
+    .then(d => animate(document.getElementById('st-visits'), d.value))
+    .catch(() => document.getElementById('st-visits').textContent = '—');
 </script>
 </body>
 </html>

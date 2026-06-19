@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐸 Cruza la calle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+  canvas { display: block; width: auto; height: auto; aspect-ratio: 420 / 620; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); border-radius: 16px; box-shadow: 0 0 60px rgba(46,230,160,0.08); touch-action: none; }
+  #hud { position: absolute; top: 12px; left: 0; right: 0; z-index: 4; display: flex; justify-content: space-between; padding: 0 16px; font-family: 'Space Mono', monospace; pointer-events: none; }
+  #hud .box { background: rgba(7,7,15,0.5); border-radius: 8px; padding: 5px 11px; }
+  #hud .k { font-size: 9px; letter-spacing: 0.12em; color: var(--mut); text-transform: uppercase; }
+  #hud .v { font-size: 18px; font-weight: 700; } #hud .v.gold { color: var(--gold); }
+  .layer { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; border-radius: 16px; }
+  #startLayer { background: rgba(7,7,15,0.55); backdrop-filter: blur(2px); }
+  #overLayer { background: rgba(7,7,15,0.82); backdrop-filter: blur(4px); display: none; }
+  .layer h1 { font-size: clamp(28px, 8vw, 40px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  .layer h1 .o { color: var(--gold); }
+  .layer h2 { font-size: 38px; font-weight: 700; color: #ff5e6c; }
+  .layer .sub { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: var(--mut); text-transform: uppercase; }
+  .layer .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); } .layer .info b { color: var(--gold); }
+  .layer button { margin-top: 4px; padding: 14px 36px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .12s; }
+  .layer button:active { transform: scale(0.96); }
+  #pad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: 52px 52px; gap: 8px; margin-top: 14px; justify-content: center; }
+  #pad button { border-radius: 13px; background: var(--bg2); border: 1px solid var(--line-hi); color: var(--txt); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .12s, transform .08s; }
+  #pad button:active { background: #20203a; transform: scale(0.94); }
+  #pad .up { grid-column: 2; grid-row: 1; } #pad .left { grid-column: 1; grid-row: 2; } #pad .down { grid-column: 2; grid-row: 2; } #pad .right { grid-column: 3; grid-row: 2; }
+  @media (hover: hover) and (pointer: fine) { #pad { display: none; } }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="wrap">
+  <div style="position:relative">
+    <canvas id="game" width="420" height="620"></canvas>
+    <div id="hud">
+      <div class="box"><div class="k">cruces</div><div class="v" id="score">0</div></div>
+      <div class="box"><div class="k">récord</div><div class="v gold" id="best">0</div></div>
+    </div>
+    <div class="layer" id="startLayer">
+      <h1>Cruza la call<span class="o">e</span></h1>
+      <div class="sub">esquivá autos y troncos</div>
+      <button id="startBtn">jugar</button>
+    </div>
+    <div class="layer" id="overLayer">
+      <div class="sub" id="ovReason">¡splat!</div>
+      <h2>GAME OVER</h2>
+      <div class="info" id="ovInfo">0 cruces</div>
+      <button id="againBtn">otra vez</button>
+    </div>
+  </div>
+  <div id="pad">
+    <button class="up" id="upBtn" aria-label="Arriba">▲</button>
+    <button class="left" id="leftBtn" aria-label="Izquierda">◀</button>
+    <button class="down" id="downBtn" aria-label="Abajo">▼</button>
+    <button class="right" id="rightBtn" aria-label="Derecha">▶</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Cruza la call<span class="o">e</span></h2>
+    <ol>
+      <li>Movés la rana 🐸 con los <b>botones</b> (o flechas en compu).</li>
+      <li>En la <b>calle</b> esquivá los autos. En el <b>río</b> saltá sobre los troncos (¡el agua te hunde!).</li>
+      <li>Llegá arriba para sumar un cruce. El río te arrastra con el tronco.</li>
+    </ol>
+    <button id="helpClose">¡a saltar!</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const COLS = 7, ROWS = 13;
+  const CELL = W / COLS; // 60
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const startLayer = document.getElementById('startLayer');
+  const overLayer = document.getElementById('overLayer');
+
+  let best = parseInt(localStorage.getItem('cruzaBest')||'0',10)||0;
+  bestEl.textContent = best;
+
+  // rows (0 = top goal, bottom = ROWS-1 start). Lanes config per row.
+  // type: 'safe', 'road' (cars), 'water' (logs), 'goal'
+  let lanes, frog, crosses, playing, raf, maxRowReached;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxHop = () => tone(520,0.05,'triangle',0.03);
+  const sfxCross = () => [659,880].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'square',0.05),i*80));
+  const sfxDie = () => { [200,140,90].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'sawtooth',0.07),i*60)); };
+
+  function buildLanes() {
+    lanes = [];
+    for (let r=0;r<ROWS;r++) {
+      if (r===0) { lanes.push({type:'goal'}); continue; }
+      if (r===ROWS-1 || r===7) { lanes.push({type:'safe'}); continue; } // start + median
+      const isWater = r>=1 && r<=6;
+      const dir = r%2===0 ? 1 : -1;
+      const speed = (0.6 + Math.random()*0.9 + crosses*0.06) * dir;
+      const obs = [];
+      if (isWater) {
+        const logLen = 2 + Math.floor(Math.random()*2);
+        let x = Math.random()*COLS;
+        for (let k=0;k<2;k++){ obs.push({x, len:logLen}); x += logLen + 1.5 + Math.random()*1.5; }
+        lanes.push({type:'water', dir, speed, obs});
+      } else {
+        const carLen = 1;
+        let x = Math.random()*COLS;
+        for (let k=0;k<2;k++){ obs.push({x, len:carLen, color:['#ff5e6c','#4d8dff','#ffcb52','#b07cff'][Math.floor(Math.random()*4)]}); x += 2.5 + Math.random()*2; }
+        lanes.push({type:'road', dir, speed, obs});
+      }
+    }
+  }
+
+  function reset() {
+    crosses = 0; scoreEl.textContent='0';
+    buildLanes();
+    frog = { col: 3, row: ROWS-1, px: 3*CELL, onLog: null };
+    maxRowReached = ROWS-1;
+    playing = true;
+    startLayer.style.display='none'; overLayer.style.display='none';
+    cancelAnimationFrame(raf); loop();
+  }
+
+  function nextLevel() {
+    // reached goal: rebuild harder, reset frog to bottom
+    crosses++; scoreEl.textContent = crosses; sfxCross();
+    buildLanes();
+    frog = { col: 3, row: ROWS-1, px: 3*CELL, onLog: null };
+    maxRowReached = ROWS-1;
+  }
+
+  function hop(dc, dr) {
+    if (!playing) return;
+    const nc = frog.col + dc, nr = frog.row + dr;
+    if (nc<0 || nc>=COLS || nr<0 || nr>=ROWS) return;
+    frog.col = nc; frog.row = nr; frog.px = nc*CELL; sfxHop();
+    if (nr < maxRowReached) maxRowReached = nr;
+    if (lanes[nr].type==='goal') { nextLevel(); }
+  }
+
+  function update() {
+    // move obstacles
+    for (let r=0;r<ROWS;r++) {
+      const L = lanes[r];
+      if (L.type==='road' || L.type==='water') {
+        for (const o of L.obs) {
+          o.x += L.speed * 0.04;
+          if (L.speed>0 && o.x > COLS+1) o.x = -o.len-1;
+          if (L.speed<0 && o.x < -o.len-1) o.x = COLS+1;
+        }
+      }
+    }
+    const L = lanes[frog.row];
+    if (L.type==='water') {
+      // must be on a log
+      let on=null;
+      for (const o of L.obs) { if (frog.col+0.5 >= o.x && frog.col+0.5 <= o.x+o.len) { on=o; break; } }
+      if (!on) return die('te hundiste');
+      // ride the log
+      frog.px += L.speed*0.04*CELL;
+      frog.col = frog.px/CELL;
+      if (frog.px < -CELL || frog.px > W) return die('te arrastró el río');
+    } else if (L.type==='road') {
+      for (const o of L.obs) {
+        if (frog.col+0.5 >= o.x && frog.col+0.5 <= o.x+o.len) return die('¡splat!');
+      }
+    }
+  }
+
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function render() {
+    for (let r=0;r<ROWS;r++) {
+      const y=r*CELL, L=lanes[r];
+      if (L.type==='goal') ctx.fillStyle='#1b3a2a';
+      else if (L.type==='safe') ctx.fillStyle='#23233a';
+      else if (L.type==='water') ctx.fillStyle='#13294a';
+      else ctx.fillStyle='#15151f';
+      ctx.fillRect(0,y,W,CELL);
+      if (L.type==='road') { ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=2; ctx.setLineDash([14,12]); ctx.beginPath(); ctx.moveTo(0,y+CELL/2); ctx.lineTo(W,y+CELL/2); ctx.stroke(); ctx.setLineDash([]); }
+      if (L.type==='goal') { ctx.fillStyle='rgba(46,230,160,0.5)'; ctx.font='bold 22px Space Grotesk, sans-serif'; ctx.textAlign='center'; ctx.fillText('META', W/2, y+CELL/2+8); }
+      // obstacles
+      if (L.type==='road') for (const o of L.obs) { ctx.fillStyle=o.color; roundRect(o.x*CELL+4, y+9, o.len*CELL-8, CELL-18, 9); ctx.fill(); ctx.fillStyle='rgba(7,7,15,0.5)'; roundRect(o.x*CELL+o.len*CELL*0.25, y+13, o.len*CELL*0.5, CELL-26, 5); ctx.fill(); }
+      if (L.type==='water') for (const o of L.obs) { ctx.fillStyle='#6b4a2a'; roundRect(o.x*CELL+2, y+10, o.len*CELL-4, CELL-20, 10); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=2; for(let k=1;k<o.len;k++){ ctx.beginPath(); ctx.moveTo((o.x+k)*CELL, y+12); ctx.lineTo((o.x+k)*CELL, y+CELL-12); ctx.stroke(); } }
+    }
+    // frog
+    const fx = frog.px + CELL/2, fy = frog.row*CELL + CELL/2;
+    ctx.font = Math.floor(CELL*0.7)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🐸', fx, fy+2);
+    ctx.textBaseline='alphabetic';
+  }
+
+  function loop() {
+    if (!playing) return;
+    update();
+    if (!playing) return;
+    render();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function die(reason) {
+    playing=false; cancelAnimationFrame(raf); sfxDie();
+    render();
+    ctx.fillStyle='rgba(255,94,108,0.3)'; ctx.fillRect(0,0,W,H);
+    if (crosses>best) { best=crosses; localStorage.setItem('cruzaBest',String(best)); bestEl.textContent=best; }
+    document.getElementById('ovReason').textContent = reason;
+    const record = crosses>0 && crosses>=best;
+    document.getElementById('ovInfo').innerHTML = `<b>${crosses}</b> ${crosses===1?'cruce':'cruces'}` + (record&&crosses>0?' · récord 🏆':` · récord ${best}`);
+    setTimeout(()=>overLayer.style.display='flex', 450);
+  }
+
+  // controls
+  document.addEventListener('keydown', e=>{
+    const m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+    if (m[e.key]) { e.preventDefault(); initAudio(); hop(...m[e.key]); }
+    else if (e.key==='Enter' && !playing) { initAudio(); reset(); }
+  });
+  document.getElementById('upBtn').addEventListener('click', ()=>{ initAudio(); hop(0,-1); });
+  document.getElementById('downBtn').addEventListener('click', ()=>{ initAudio(); hop(0,1); });
+  document.getElementById('leftBtn').addEventListener('click', ()=>{ initAudio(); hop(-1,0); });
+  document.getElementById('rightBtn').addEventListener('click', ()=>{ initAudio(); hop(1,0); });
+  // swipe on canvas
+  let sx, sy;
+  canvas.addEventListener('pointerdown', e=>{ sx=e.clientX; sy=e.clientY; });
+  canvas.addEventListener('pointerup', e=>{
+    initAudio();
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if (Math.abs(dx)<20 && Math.abs(dy)<20) { hop(0,-1); return; } // tap = up
+    if (Math.abs(dx)>Math.abs(dy)) hop(dx>0?1:-1,0); else hop(0,dy>0?1:-1);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{ initAudio(); reset(); });
+  document.getElementById('againBtn').addEventListener('click', ()=>{ initAudio(); reset(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('cruzaSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('cruzaSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+
+  // initial paint
+  crosses=0; buildLanes(); frog={col:3,row:ROWS-1,px:3*CELL,onLog:null}; render();
+</script>
+</body>
+</html>

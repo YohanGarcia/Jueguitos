@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🌀 Laberinto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(24px, 6.5vw, 32px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  .hud { display: flex; gap: 22px; font-family: 'Space Mono', monospace; font-size: 14px; color: var(--mut); }
+  .hud b { color: var(--gold); }
+  #stageWrap { position: relative; }
+  canvas { display: block; width: auto; height: auto; aspect-ratio: 1; max-width: calc(100vw - 32px); max-height: min(56dvh, 480px); border-radius: 14px; background: var(--bg2); border: 1px solid var(--line); touch-action: none; }
+  #overlay { position: absolute; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(7,7,15,0.84); backdrop-filter: blur(4px); border-radius: 14px; text-align: center; padding: 20px; }
+  #overlay h2 { font-size: 36px; font-weight: 700; color: var(--green); }
+  #overlay .info { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--mut); } #overlay .info b { color: var(--gold); }
+  #overlay button { margin-top: 4px; padding: 12px 28px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  #pad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: 48px 48px; gap: 8px; justify-content: center; }
+  #pad button { border-radius: 12px; background: var(--bg2); border: 1px solid var(--line-hi); color: var(--txt); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .12s, transform .08s; }
+  #pad button:active { background: #20203a; transform: scale(0.94); }
+  #pad .up { grid-column: 2; grid-row: 1; } #pad .left { grid-column: 1; grid-row: 2; } #pad .down { grid-column: 2; grid-row: 2; } #pad .right { grid-column: 3; grid-row: 2; }
+  @media (hover: hover) and (pointer: fine) { #pad { display: none; } }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="wrap">
+  <header><h1>Laberin<span class="o">t</span>o</h1></header>
+  <div class="hud"><span>nivel <b id="level">1</b></span><span>tiempo <b id="time">0:00</b></span></div>
+  <div id="stageWrap">
+    <canvas id="game" width="500" height="500"></canvas>
+    <div id="overlay">
+      <h2 id="ovTitle">¡Nivel completado!</h2>
+      <div class="info" id="ovInfo">seguís al siguiente</div>
+      <button id="nextBtn">siguiente nivel</button>
+    </div>
+  </div>
+  <div id="pad">
+    <button class="up" id="upBtn">▲</button>
+    <button class="left" id="leftBtn">◀</button>
+    <button class="down" id="downBtn">▼</button>
+    <button class="right" id="rightBtn">▶</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Laberin<span class="o">t</span>o</h2>
+    <ol>
+      <li>Movés el punto 🟢 con los <b>botones</b> (o flechas / deslizando en la pantalla).</li>
+      <li>Llegá a la <b>meta dorada</b> 🏁 evitando las paredes.</li>
+      <li>Cada nivel es <b>más grande</b>. ¡Resolvé la mayor cantidad!</li>
+    </ol>
+    <button id="helpClose">¡a explorar!</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const SIZE = 500;
+  const levelEl = document.getElementById('level');
+  const timeEl = document.getElementById('time');
+  const overlay = document.getElementById('overlay');
+  let level = 1, N, cells, player, goal, cell, won, t0, tInt;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.04){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0b=actx.currentTime; g.gain.setValueAtTime(v,t0b); g.gain.exponentialRampToValueAtTime(0.001,t0b+d); o.connect(g);g.connect(actx.destination);o.start(t0b);o.stop(t0b+d); }
+  const sfxStep=()=>tone(360,0.03,'triangle',0.02);
+  const sfxBump=()=>tone(120,0.05,'sawtooth',0.03);
+  const sfxWin=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'square',0.05),i*90));
+
+  // cell: bit flags for walls — 1 top, 2 right, 4 bottom, 8 left
+  function genMaze(n) {
+    const grid = Array.from({length:n},()=>Array(n).fill(15));
+    const vis = Array.from({length:n},()=>Array(n).fill(false));
+    const stack=[[0,0]]; vis[0][0]=true;
+    const DIRS=[[0,-1,1,4],[1,0,2,8],[0,1,4,1],[-1,0,8,2]]; // dx,dy,wallFrom,wallTo
+    while(stack.length){
+      const [x,y]=stack[stack.length-1];
+      const opts=DIRS.filter(([dx,dy])=>{ const nx=x+dx,ny=y+dy; return nx>=0&&nx<n&&ny>=0&&ny<n&&!vis[ny][nx]; });
+      if(!opts.length){ stack.pop(); continue; }
+      const [dx,dy,wf,wt]=opts[Math.floor(Math.random()*opts.length)];
+      const nx=x+dx,ny=y+dy;
+      grid[y][x]&=~wf; grid[ny][nx]&=~wt; vis[ny][nx]=true; stack.push([nx,ny]);
+    }
+    return grid;
+  }
+
+  function newLevel() {
+    N = 6 + Math.min(level-1, 10); // grows
+    cells = genMaze(N);
+    cell = SIZE/N;
+    player = {x:0,y:0};
+    goal = {x:N-1,y:N-1};
+    won=false;
+    overlay.style.display='none';
+    levelEl.textContent=level;
+    clearInterval(tInt); t0=performance.now(); tInt=setInterval(updTime,500);
+    draw();
+  }
+  function updTime(){ const s=Math.floor((performance.now()-t0)/1000); timeEl.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+  function canMove(dx,dy) {
+    const c=cells[player.y][player.x];
+    if (dx===0&&dy===-1) return !(c&1);
+    if (dx===1&&dy===0) return !(c&2);
+    if (dx===0&&dy===1) return !(c&4);
+    if (dx===-1&&dy===0) return !(c&8);
+    return false;
+  }
+  function move(dx,dy) {
+    if (won) return;
+    if (canMove(dx,dy)) { player.x+=dx; player.y+=dy; sfxStep(); draw(); if(player.x===goal.x&&player.y===goal.y) win(); }
+    else sfxBump();
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,SIZE,SIZE);
+    // goal
+    ctx.fillStyle='rgba(255,203,82,0.18)';
+    ctx.fillRect(goal.x*cell+2, goal.y*cell+2, cell-4, cell-4);
+    ctx.font=Math.floor(cell*0.6)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏁', goal.x*cell+cell/2, goal.y*cell+cell/2+2);
+    // walls
+    ctx.strokeStyle='#5a5a78'; ctx.lineWidth=Math.max(2, cell*0.08); ctx.lineCap='round';
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++){
+      const c=cells[y][x], px=x*cell, py=y*cell;
+      ctx.beginPath();
+      if(c&1){ ctx.moveTo(px,py); ctx.lineTo(px+cell,py); }
+      if(c&2){ ctx.moveTo(px+cell,py); ctx.lineTo(px+cell,py+cell); }
+      if(c&4){ ctx.moveTo(px,py+cell); ctx.lineTo(px+cell,py+cell); }
+      if(c&8){ ctx.moveTo(px,py); ctx.lineTo(px,py+cell); }
+      ctx.stroke();
+    }
+    // player
+    ctx.fillStyle='#2ee6a0';
+    ctx.beginPath(); ctx.arc(player.x*cell+cell/2, player.y*cell+cell/2, cell*0.28, 0, Math.PI*2); ctx.fill();
+    ctx.textBaseline='alphabetic';
+  }
+
+  function win() {
+    won=true; clearInterval(tInt); sfxWin();
+    const lvlBest = parseInt(localStorage.getItem('laberintoBest')||'0',10)||0;
+    if (level>lvlBest) localStorage.setItem('laberintoBest',String(level));
+    document.getElementById('ovInfo').innerHTML = `nivel ${level} resuelto · grilla ${N}×${N}`;
+    setTimeout(()=>overlay.style.display='flex',300);
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ initAudio(); level++; newLevel(); });
+  document.getElementById('upBtn').addEventListener('click', ()=>{ initAudio(); move(0,-1); });
+  document.getElementById('downBtn').addEventListener('click', ()=>{ initAudio(); move(0,1); });
+  document.getElementById('leftBtn').addEventListener('click', ()=>{ initAudio(); move(-1,0); });
+  document.getElementById('rightBtn').addEventListener('click', ()=>{ initAudio(); move(1,0); });
+  document.addEventListener('keydown', e=>{
+    const m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+    if (m[e.key]){ e.preventDefault(); initAudio(); move(...m[e.key]); }
+  });
+  // swipe
+  let sx,sy;
+  canvas.addEventListener('pointerdown', e=>{ sx=e.clientX; sy=e.clientY; });
+  canvas.addEventListener('pointerup', e=>{ initAudio(); const dx=e.clientX-sx, dy=e.clientY-sy; if(Math.abs(dx)<16&&Math.abs(dy)<16) return; if(Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0); else move(0,dy>0?1:-1); });
+
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('laberintoSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('laberintoSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  newLevel();
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⭕ Tres en raya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --red:#ff5e6c; --blue:#4d8dff; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 18px; width: min(92vw, 380px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .score { display: flex; gap: 10px; width: 100%; }
+  .who { flex: 1; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; transition: border-color .2s, background .2s; }
+  .who.turn { border-color: var(--line-hi); background: #181830; }
+  .who .mk { font-size: 22px; font-weight: 700; width: 24px; text-align: center; }
+  .who.you .mk { color: var(--red); } .who.cpu .mk { color: var(--blue); }
+  .who .lbl { font-size: 12px; color: var(--mut); text-transform: uppercase; letter-spacing: 0.08em; }
+  .who .num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; }
+  #grid { width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .cell { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: clamp(44px, 16vw, 72px); font-weight: 700; cursor: pointer; transition: background .12s, transform .08s; }
+  .cell:hover:empty { background: #17172a; }
+  .cell:active:empty { transform: scale(0.97); }
+  .cell.x { color: var(--red); } .cell.o { color: var(--blue); }
+  .cell.win { background: rgba(255,203,82,0.16); border-color: var(--gold); }
+  .cell .mark { display: inline-block; animation: pop .2s ease; }
+  @keyframes pop { 0%{transform:scale(0.3);opacity:0} 100%{transform:scale(1);opacity:1} }
+  #grid.lock { pointer-events: none; }
+  #status { min-height: 22px; font-size: 16px; color: var(--mut); font-weight: 500; text-align: center; }
+  #status b.r { color: var(--red); } #status b.b { color: var(--blue); }
+  #resetBtn { padding: 11px 28px; border: 1px solid var(--line-hi); border-radius: 999px; background: var(--bg2); color: var(--txt); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  #resetBtn:hover { background: #1a1a30; border-color: var(--gold); color: var(--gold); }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+  #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; }
+  #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; }
+  #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Tres en ray<span class="o">a</span></h1>
+    <div class="sub">vos (✕) vs la máquina (◯)</div>
+  </header>
+  <div class="score">
+    <div class="who you turn" id="youCard"><div class="mk">✕</div><div><div class="lbl">vos</div><div class="num" id="youScore">0</div></div></div>
+    <div class="who cpu" id="cpuCard"><div class="mk">◯</div><div><div class="lbl">máquina</div><div class="num" id="cpuScore">0</div></div></div>
+  </div>
+  <div id="grid"></div>
+  <div id="status">¡Empezás vos!</div>
+  <button id="resetBtn">nueva partida</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Tres en ray<span class="o">a</span></h2>
+    <ol>
+      <li>Tocá una casilla para poner tu <b>✕</b>. La máquina pone <b>◯</b>.</li>
+      <li>Gana quien <b>alinee 3</b> en fila, columna o diagonal.</li>
+      <li>La máquina es <b>imbatible</b>: lo mejor que podés sacar es un empate.</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const HUMAN = 'x', CPU = 'o';
+  const gridEl = document.getElementById('grid');
+  const statusEl = document.getElementById('status');
+  const youCard = document.getElementById('youCard'), cpuCard = document.getElementById('cpuCard');
+  const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  let cells, turn, over;
+  let scores = { you: parseInt(localStorage.getItem('tatetiYou')||'0',10)||0, cpu: parseInt(localStorage.getItem('tatetiCpu')||'0',10)||0 };
+  document.getElementById('youScore').textContent = scores.you;
+  document.getElementById('cpuScore').textContent = scores.cpu;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxX = () => tone(440,0.06,'triangle',0.04);
+  const sfxO = () => tone(330,0.06,'sine',0.04);
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+  const sfxLose = () => [392,294,196].forEach((f,i)=>setTimeout(()=>tone(f,0.25,'sawtooth',0.05),i*130));
+
+  function build() {
+    gridEl.innerHTML = '';
+    for (let i=0;i<9;i++){ const c=document.createElement('div'); c.className='cell'; c.dataset.i=i; c.addEventListener('click',()=>{ initAudio(); humanMove(i); }); gridEl.appendChild(c); }
+  }
+  function reset() { cells = Array(9).fill(''); turn = HUMAN; over = false; build(); setTurnUI(); statusEl.innerHTML = '¡Empezás vos!'; }
+  function setTurnUI() { youCard.classList.toggle('turn', turn===HUMAN && !over); cpuCard.classList.toggle('turn', turn===CPU && !over); }
+  function draw(i, p) { const el = gridEl.children[i]; el.classList.add(p==='x'?'x':'o'); el.innerHTML = '<span class="mark">'+(p==='x'?'✕':'◯')+'</span>'; p==='x'?sfxX():sfxO(); }
+  function winnerOf(b) { for (const [a,c,d] of WINS) if (b[a] && b[a]===b[c] && b[a]===b[d]) return {p:b[a], line:[a,c,d]}; return null; }
+
+  function humanMove(i) {
+    if (over || turn!==HUMAN || cells[i]) return;
+    cells[i]=HUMAN; draw(i,HUMAN);
+    if (checkEnd()) return;
+    turn = CPU; setTurnUI(); statusEl.innerHTML = 'la <b class="b">máquina</b> piensa…';
+    gridEl.classList.add('lock');
+    setTimeout(()=>{ const m = bestMove(); cells[m]=CPU; draw(m,CPU); gridEl.classList.remove('lock'); if (checkEnd()) return; turn=HUMAN; setTurnUI(); statusEl.innerHTML='tu turno'; }, 420);
+  }
+
+  function checkEnd() {
+    const w = winnerOf(cells);
+    if (w) { finish(w.p, w.line); return true; }
+    if (cells.every(v=>v)) { finish(null, null); return true; }
+    return false;
+  }
+  function finish(p, line) {
+    over = true; setTurnUI();
+    if (line) line.forEach(i=>gridEl.children[i].classList.add('win'));
+    if (p===HUMAN) { scores.you++; localStorage.setItem('tatetiYou',String(scores.you)); document.getElementById('youScore').textContent=scores.you; statusEl.innerHTML='🎉 ¡Ganaste!'; sfxWin(); }
+    else if (p===CPU) { scores.cpu++; localStorage.setItem('tatetiCpu',String(scores.cpu)); document.getElementById('cpuScore').textContent=scores.cpu; statusEl.innerHTML='Ganó la <b class="b">máquina</b> 🤖'; sfxLose(); }
+    else { statusEl.innerHTML='Empate 🤝'; }
+    setTimeout(reset, 2200);
+  }
+
+  // minimax — perfect play
+  function bestMove() {
+    let bestScore=-Infinity, move;
+    for (let i=0;i<9;i++) if (!cells[i]) { cells[i]=CPU; const s=minimax(cells,0,false); cells[i]=''; if (s>bestScore){bestScore=s;move=i;} }
+    return move;
+  }
+  function minimax(b, depth, maximizing) {
+    const w = winnerOf(b);
+    if (w) return w.p===CPU ? 10-depth : depth-10;
+    if (b.every(v=>v)) return 0;
+    if (maximizing) { let best=-Infinity; for(let i=0;i<9;i++) if(!b[i]){b[i]=CPU;best=Math.max(best,minimax(b,depth+1,false));b[i]='';} return best; }
+    else { let best=Infinity; for(let i=0;i<9;i++) if(!b[i]){b[i]=HUMAN;best=Math.min(best,minimax(b,depth+1,true));b[i]='';} return best; }
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{ initAudio(); reset(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('tatetiSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('tatetiSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  reset();
+</script>
+</body>
+</html>

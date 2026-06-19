@@ -57,7 +57,7 @@
 
   /* ---- Stats ---- */
   .stats {
-    display: grid;     grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 1px; background: var(--line); border: 1px solid var(--line);
     border-radius: 16px; overflow: hidden; margin-top: clamp(30px, 5vw, 46px);
   }
@@ -67,16 +67,47 @@
   .stat .l { font-size: 12px; letter-spacing: 0.06em; color: var(--mut); margin-top: 8px; text-transform: uppercase; }
 
   /* ---- Section label ---- */
-  .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: clamp(40px, 6vw, 64px) 0 22px; gap: 16px; flex-wrap: wrap; }
+  .sec-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: clamp(40px, 6vw, 64px) 0 22px; gap: 16px; }
   .sec-head h2 { font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
-  .sec-head .count { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--mut2); }
-  #search {
-    width: 100%; margin: 0 0 22px; padding: 10px 16px; border: none; border-radius: 30px;
-    background: var(--card); color: var(--txt); font-size: 14px; font-family: inherit;
-    outline: 1px solid var(--line); transition: outline .18s;
+  .tools { display: flex; align-items: center; gap: 14px; }
+  .search {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--bg2); border: 1px solid var(--line); border-radius: 999px;
+    padding: 9px 16px; transition: border-color .18s, box-shadow .18s;
   }
-  #search:focus { outline-color: var(--gold); }
-  #search::placeholder { color: var(--mut2); }
+  .search:focus-within { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 12%, transparent); }
+  .search svg { width: 15px; height: 15px; fill: none; stroke: var(--mut); stroke-width: 2; flex: none; }
+  .search input {
+    background: none; border: none; outline: none; color: var(--txt);
+    font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; width: 170px; padding: 0;
+  }
+  .search input::placeholder { color: var(--mut2); }
+  .search .clear { background: none; border: none; color: var(--mut2); cursor: pointer; font-size: 15px; padding: 0 2px; line-height: 1; display: none; }
+  .search .clear:hover { color: var(--txt); }
+  .sec-head .count { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--mut2); white-space: nowrap; }
+
+  .empty {
+    display: none; text-align: center; color: var(--mut); padding: 56px 20px;
+    border: 1px dashed var(--line-hi); border-radius: 18px;
+  }
+  .empty .big { font-size: 34px; margin-bottom: 12px; opacity: 0.7; }
+  .empty p { font-size: 14px; line-height: 1.5; }
+  .empty .q { color: var(--gold); font-family: 'Space Mono', monospace; }
+
+  .more { display: flex; justify-content: center; margin-top: 30px; }
+  .more button {
+    font-family: 'Space Mono', monospace; font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--txt); background: var(--card); border: 1px solid var(--line-hi); border-radius: 999px;
+    padding: 13px 30px; cursor: pointer; transition: background .18s, border-color .18s, color .18s;
+  }
+  .more button:hover { background: var(--card-hi); border-color: var(--gold); color: var(--gold); }
+
+  @media (max-width: 600px) {
+    .sec-head { align-items: stretch; }
+    .tools { width: 100%; justify-content: space-between; }
+    .search { flex: 1; }
+    .search input { width: 100%; }
+  }
 
   /* ---- Grid ---- */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; }
@@ -145,9 +176,14 @@
   footer .repo { display: inline-flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; }
   footer .repo svg { width: 16px; height: 16px; fill: currentColor; }
   footer .lic { font-family: 'Space Mono', monospace; letter-spacing: 0.04em; }
+  footer .visits { display: inline-flex; align-items: center; gap: 7px; font-family: 'Space Mono', monospace; font-size: 13px; color: var(--mut); }
+  footer .visits svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+  footer .visits b { color: var(--gold); font-weight: 700; }
+  footer .visits b.loading { color: var(--mut2); font-weight: 400; }
 
   @media (max-width: 540px) {
     .stats { grid-template-columns: 1fr 1fr; }
+    .stats .stat:last-child { grid-column: 1 / -1; }
   }
 </style>
 </head>
@@ -156,29 +192,45 @@
   <header>
     <div class="eyebrow"><span class="blink"></span> colección arcade · sin instalar nada</div>
     <h1>Juegu<span class="o">i</span>tos</h1>
-    <p class="tagline">Dieciséis clásicos hechos a mano en HTML puro. Elegí uno, batí tu récord, repetí.</p>
+    <p class="tagline">Decenas de clásicos hechos a mano en HTML puro. Elegí uno, batí tu récord, repetí.</p>
 
     <div class="stats">
       <div class="stat"><div class="n" id="st-games">9</div><div class="l">juegos</div></div>
       <div class="stat"><div class="n gold" id="st-total">0</div><div class="l">puntos acumulados</div></div>
       <div class="stat"><div class="n" id="st-records">0</div><div class="l">récords logrados</div></div>
-      <div class="stat"><div class="n gold" id="st-visits">0</div><div class="l">visitas</div></div>
     </div>
   </header>
 
   <div class="sec-head">
     <h2>Elegí tu juego</h2>
-    <span class="count" id="sec-count">09 títulos</span>
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+        <input id="q" type="text" placeholder="Buscar juego…" autocomplete="off" spellcheck="false">
+        <button class="clear" id="clearBtn" aria-label="Limpiar">✕</button>
+      </label>
+      <span class="count" id="sec-count">09 títulos</span>
+    </div>
   </div>
-  <input id="search" type="text" placeholder="🔍 buscar juego…" autocomplete="off">
 
   <div class="grid" id="grid"></div>
+
+  <div class="empty" id="empty">
+    <div class="big">🕹️</div>
+    <p>No hay juegos que coincidan con <span class="q" id="empty-q"></span>.</p>
+  </div>
+
+  <div class="more" id="more" style="display:none"><button id="moreBtn">cargar más</button></div>
 
   <footer>
     <a class="repo" href="https://github.com/YohanGarcia/Jueguitos" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       YohanGarcia/Jueguitos
     </a>
+    <span class="visits" title="visitas totales">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <b id="visitCount" class="loading">…</b> visitas
+    </span>
     <span class="lic">© 2026 · Licencia MIT · hecho con ☕ y JavaScript</span>
   </footer>
 </div>
@@ -200,47 +252,134 @@
     { file: 'galaxia.html',  icon: '🌠', name: 'Galaxia',               desc: 'Shooter espacial con mejoras de arma y un jefe final.', a: '#2ee6ff', key: 'galaxiaBest',  fmt: 'pts' },
     { file: 'torres.html',   icon: '🏰', name: 'Torres',                desc: 'Tower defense: construí torres y frená las oleadas.', a: '#34e0a0', key: 'torresBestWave', fmt: 'pts' },
     { file: 'joyas.html',    icon: '💎', name: 'Joyas',                 desc: 'Match-3: alineá gemas, encadená combos, armá especiales.', a: '#c084fc', key: 'joyasBest',    fmt: 'pts' },
-    { file: 'punteria.html', icon: '🎯', name: 'Puntería',              desc: 'Tiro al blanco: dianas, combos y munición. ¡Ojo la bomba!', a: '#ff5e3a', key: 'punteriaBest', fmt: 'pts', tag: 'nuevo' },
-    { file: 'corredor.html', icon: '🏃', name: 'Corredor',              desc: 'Corré sin parar, esquivá obstáculos y batí tu marca.', a: '#3aa8ff', key: 'corredorBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'punteria.html', icon: '🎯', name: 'Puntería',              desc: 'Tiro al blanco: dianas, combos y munición. ¡Ojo la bomba!', a: '#ff5e3a', key: 'punteriaBest', fmt: 'pts' },
+    { file: 'corredor.html', icon: '🏃', name: 'Corredor',              desc: 'Runner infinito: saltá, deslizate y juntá monedas.', a: '#84cc16', key: 'corredorBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'palabra.html',  icon: '🔤', name: 'Palabra',               desc: 'Adiviná la palabra de 5 letras en 6 intentos.', a: '#2ee6a0', key: 'palabraBest', fmt: 'streak', tag: 'nuevo' },
+    { file: 'simon.html',    icon: '🎨', name: 'Simón',                 desc: 'Memorizá y repetí la secuencia de colores.', a: '#4d8dff', key: 'simonBest', fmt: 'round', tag: 'nuevo' },
+    { file: 'buscaminas.html', icon: '💣', name: 'Buscaminas',           desc: 'Despejá el campo sin pisar ninguna mina.', a: '#ff5e6c', key: 'minasBest', fmt: 'time', tag: 'nuevo' },
+    { file: 'topos.html',    icon: '🐹', name: 'Topos',                 desc: 'Atrapá los topos y esquivá las bombas en 30s.', a: '#ffcb52', key: 'toposBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'autopista.html', icon: '🏎️', name: 'Autopista',           desc: 'Esquivá el tráfico a toda velocidad sin chocar.', a: '#ffcb52', key: 'autopistaBest', fmt: 'm', tag: 'nuevo' },
+    { file: 'conecta4.html', icon: '🔴', name: 'Conecta 4',            desc: 'Alineá 4 fichas antes que la máquina. Estrategia 1v1.', a: '#ff5e6c', key: 'conecta4You', fmt: 'wins', tag: 'nuevo' },
+    { file: 'tateti.html',   icon: '⭕', name: 'Tres en raya',          desc: 'El clásico ✕ y ◯ contra una IA imbatible.', a: '#4d8dff', key: 'tatetiYou', fmt: 'wins', tag: 'nuevo' },
+    { file: 'memotest.html', icon: '🃏', name: 'Memotest',              desc: 'Encontrá los 8 pares en la menor cantidad de jugadas.', a: '#2ee6a0', key: 'memotestBest', fmt: 'movesLow', tag: 'nuevo' },
+    { file: 'ahorcado.html', icon: '🪢', name: 'Ahorcado',              desc: 'Adiviná la palabra letra por letra antes del muñeco.', a: '#ffcb52', key: 'ahorcadoWins', fmt: 'wins', tag: 'nuevo' },
+    { file: 'deslizante.html', icon: '🔢', name: 'Deslizante',          desc: 'Ordená del 1 al 15 deslizando las fichas.', a: '#b07cff', key: 'deslizanteBest', fmt: 'movesLow', tag: 'nuevo' },
+    { file: 'cruza.html',    icon: '🐸', name: 'Cruza la calle',        desc: 'Esquivá autos y saltá troncos para cruzar.', a: '#2ee6a0', key: 'cruzaBest', fmt: 'cross', tag: 'nuevo' },
+    { file: 'ppt.html',      icon: '🪨', name: 'Piedra Papel Tijera',     desc: 'El clásico a mano alzada contra la máquina.', a: '#4d8dff', key: 'pptWins', fmt: 'wins', tag: 'nuevo' },
+    { file: 'reflejos.html', icon: '⚡', name: 'Reflejos',                desc: 'Tocá apenas la pantalla se ponga verde.', a: '#2ee6a0', key: 'reflejosBest', fmt: 'ms', tag: 'nuevo' },
+    { file: 'lightsout.html', icon: '💡', name: 'Apagá las luces',         desc: 'Dejá todo el tablero a oscuras. Puzzle de lógica.', a: '#ffcb52', key: 'lightsoutBest', fmt: 'movesLow', tag: 'nuevo' },
+    { file: 'schulte.html',  icon: '🔢', name: 'Encontrá el número',      desc: 'Tocá del 1 al 25 en orden lo más rápido posible.', a: '#2ee6a0', key: 'schulteBest', fmt: 'secLow', tag: 'nuevo' },
+    { file: 'colores.html',  icon: '🎨', name: 'Colores',                desc: 'Tocá el color de la tinta, no la palabra. 30s.', a: '#b07cff', key: 'coloresBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'materapido.html', icon: '➗', name: 'Mate rápido',           desc: 'Resolvé cuentas contrarreloj y encadená combos.', a: '#4d8dff', key: 'materapidoBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'laberinto.html', icon: '🌀', name: 'Laberinto',             desc: 'Encontrá la salida; cada nivel es más grande.', a: '#2ee6a0', key: 'laberintoBest', fmt: 'level', tag: 'nuevo' },
+    { file: 'airhockey.html', icon: '🏒', name: 'Air Hockey',            desc: 'Meté 7 goles antes que la máquina. Arrastrá la paleta.', a: '#ff5e6c', key: 'hockeyWins', fmt: 'wins', tag: 'nuevo' },
+    { file: 'penales.html',  icon: '🥅', name: 'Penales',                desc: 'Pateá y atajá en una tanda al mejor estilo arcade.', a: '#2ee6a0', key: 'penalesWins', fmt: 'wins', tag: 'nuevo' },
+    { file: 'arco.html',     icon: '🏹', name: 'Tiro con arco',          desc: 'Apuntá con gravedad y viento; clavá en el centro.', a: '#ffcb52', key: 'arcoBest', fmt: 'pts', tag: 'nuevo' },
+    { file: 'zuma.html',     icon: '🐸', name: 'Rana Zuma',              desc: 'Dispará bolas y reventá 3+ del mismo color. Reliquia.', a: '#2ee6a0', key: 'zumaBest', fmt: 'pts', tag: 'nuevo' },
   ];
 
   function fmt(n, kind) {
     if (kind === 'wins') return n === 1 ? '1 victoria' : n + ' victorias';
+    if (kind === 'streak') return 'racha ' + n.toLocaleString('es');
+    if (kind === 'round') return 'ronda ' + n.toLocaleString('es');
+    if (kind === 'time') return n + 's';
+    if (kind === 'm') return n.toLocaleString('es') + ' m';
+    if (kind === 'movesLow') return n + ' mov';
+    if (kind === 'cross') return n === 1 ? '1 cruce' : n + ' cruces';
+    if (kind === 'ms') return n + ' ms';
+    if (kind === 'secLow') return n + 's';
+    if (kind === 'level') return 'nivel ' + n;
     return n.toLocaleString('es');
   }
 
   const grid = document.getElementById('grid');
-  const search = document.getElementById('search');
+  const emptyEl = document.getElementById('empty');
+  const emptyQ = document.getElementById('empty-q');
+  const moreWrap = document.getElementById('more');
+  const moreBtn = document.getElementById('moreBtn');
+  const secCount = document.getElementById('sec-count');
+  const qInput = document.getElementById('q');
+  const clearBtn = document.getElementById('clearBtn');
 
-  let totalScore = 0, totalRecords = 0;
+  // stats over ALL games (independent of search/pagination)
+  let total = 0, records = 0;
   for (const g of GAMES) {
     const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
-    if (g.fmt !== 'wins') totalScore += raw;
-    if (raw > 0) totalRecords++;
+    if (g.fmt !== 'wins') total += raw;
+    if (raw > 0) records++;
   }
 
-  function renderGrid(filter) {
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  function makeCard(g) {
+    const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
+    const tagHtml = g.tag ? `<span class="tag ${g.tag === 'nuevo' ? 'new' : ''}">${g.tag}</span>` : '';
+    const bestVal = raw > 0 ? `<span class="v">${fmt(raw, g.fmt)}</span>` : `<span class="v empty">sin marca</span>`;
+    const bestLbl = g.fmt === 'wins' ? 'récord' : 'tu récord';
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = g.file;
+    a.style.setProperty('--a', g.a);
+    a.innerHTML = `
+      <div class="top">
+        <div class="icon">${g.icon}</div>
+        ${tagHtml}
+      </div>
+      <h3>${g.name}</h3>
+      <p>${g.desc}</p>
+      <div class="best"><span class="lbl">${bestLbl}</span> ${bestVal}</div>
+      <div class="play">▶</div>`;
+    return a;
+  }
+
+  const PAGE = 8;
+  let query = '';
+  let shown = PAGE;
+
+  function filtered() {
+    if (!query) return GAMES;
+    const q = norm(query);
+    return GAMES.filter(g => norm(g.name).includes(q) || norm(g.desc).includes(q));
+  }
+
+  function render() {
+    const list = filtered();
+    const visible = list.slice(0, shown);
     grid.innerHTML = '';
-    let shown = 0;
-    for (const g of GAMES) {
-      const q = (filter || '').toLowerCase();
-      if (q && !g.name.toLowerCase().includes(q) && !g.desc.toLowerCase().includes(q)) continue;
-      shown++;
-      const raw = parseInt(localStorage.getItem(g.key) || '0', 10) || 0;
-      const tagHtml = g.tag ? `<span class="tag ${g.tag === 'nuevo' ? 'new' : ''}">${g.tag}</span>` : '';
-      const bestVal = raw > 0 ? `<span class="v">${fmt(raw, g.fmt)}</span>` : `<span class="v empty">sin marca</span>`;
-      const bestLbl = g.fmt === 'wins' ? 'récord' : 'tu récord';
-      const a = document.createElement('a');
-      a.className = 'card'; a.href = g.file; a.style.setProperty('--a', g.a);
-      a.innerHTML = `<div class="top"><div class="icon">${g.icon}</div>${tagHtml}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="best"><span class="lbl">${bestLbl}</span> ${bestVal}</div><div class="play">▶</div>`;
-      grid.appendChild(a);
-    }
-    document.getElementById('sec-count').textContent = String(shown).padStart(2, '0') + ' título' + (shown !== 1 ? 's' : '');
+    for (const g of visible) grid.appendChild(makeCard(g));
+
+    const none = list.length === 0;
+    emptyEl.style.display = none ? 'block' : 'none';
+    grid.style.display = none ? 'none' : '';
+    if (none) emptyQ.textContent = `“${query}”`;
+
+    moreWrap.style.display = visible.length < list.length ? 'flex' : 'none';
+
+    if (query) secCount.textContent = `${list.length} de ${GAMES.length}`;
+    else secCount.textContent = String(GAMES.length).padStart(2, '0') + ' títulos';
   }
 
-  search.addEventListener('input', () => renderGrid(search.value));
+  qInput.addEventListener('input', () => {
+    query = qInput.value.trim();
+    shown = PAGE;
+    clearBtn.style.display = query ? 'block' : 'none';
+    render();
+  });
+  clearBtn.addEventListener('click', () => {
+    qInput.value = ''; query = ''; shown = PAGE; clearBtn.style.display = 'none';
+    render(); qInput.focus();
+  });
+  moreBtn.addEventListener('click', () => { shown += PAGE; render(); });
 
-  renderGrid();
+  // infinite scroll: reveal more as the "cargar más" row comes into view
+  const io = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && shown < filtered().length) {
+      shown += PAGE; render();
+    }
+  }, { rootMargin: '200px' });
+  io.observe(moreWrap);
+
+  render();
 
   const animate = (el, to, kind) => {
     const dur = 900, t0 = performance.now();
@@ -254,13 +393,32 @@
   };
 
   document.getElementById('st-games').textContent = GAMES.length;
-  animate(document.getElementById('st-total'), totalScore);
-  animate(document.getElementById('st-records'), totalRecords, 'plain');
+  document.getElementById('sec-count').textContent = String(GAMES.length).padStart(2, '0') + ' títulos';
+  animate(document.getElementById('st-total'), total);
+  animate(document.getElementById('st-records'), records, 'plain');
 
-  fetch('https://api.countapi.xyz/hit/jueguitos/visitas')
-    .then(r => r.json())
-    .then(d => animate(document.getElementById('st-visits'), d.value))
-    .catch(() => document.getElementById('st-visits').textContent = '—');
+  // ---- contador de visitas (global, sin backend) ----
+  // countapi.xyz cerró; usamos Abacus, un reemplazo con la misma API. Respaldo local si falla la red.
+  (function visitCounter() {
+    const el = document.getElementById('visitCount');
+    const NS = 'jueguitos-yohan', KEY = 'visitas';
+    // cuenta cada vez que un usuario entra/recarga la página
+    const url = `https://abacus.jasoncameron.dev/hit/${NS}/${KEY}`;
+    const show = (n) => { el.textContent = Number(n).toLocaleString('es'); el.classList.remove('loading'); };
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        const n = d.value ?? d.count;
+        if (n == null || isNaN(n)) throw new Error('sin valor');
+        show(n);
+      })
+      .catch(() => {
+        // respaldo local si falla la red
+        let n = parseInt(localStorage.getItem('visitCountLocal') || '0', 10) + 1;
+        localStorage.setItem('visitCountLocal', String(n));
+        show(n);
+      });
+  })();
 </script>
 </body>
 </html>

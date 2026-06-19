@@ -7,12 +7,12 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
   body {
-    background: #0a1410; display: flex; justify-content: center; align-items: center; height: 100vh;
+    background: #0a1410; display: flex; justify-content: center; align-items: center; height: 100dvh;
     font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden;
   }
   canvas {
     border-radius: 16px; box-shadow: 0 0 60px rgba(52, 224, 160, 0.18);
-    width: 520px; height: 800px; max-width: 98vw; max-height: 94vh; touch-action: none;
+    width: auto; height: auto; aspect-ratio: 520 / 800; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); touch-action: none;
   }
   .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; text-align: center; z-index: 3; pointer-events: none; width: 100%; padding: 0 24px; }
   #startScreen .em { font-size: 60px; display: block; margin-bottom: 6px; }

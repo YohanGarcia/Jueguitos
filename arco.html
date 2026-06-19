@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🏹 Tiro con arco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; --red:#ff5e6c; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid var(--line-hi); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.2); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.12); border: 1px solid var(--line-hi); color: var(--txt); font-size: 16px; font-weight: 700; cursor: pointer; }
+  #wrap { position: relative; }
+  canvas { display: block; width: auto; height: auto; aspect-ratio: 440 / 660; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); border-radius: 16px; box-shadow: 0 0 60px rgba(255,203,82,0.08); touch-action: none; }
+  .layer { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; border-radius: 16px; }
+  #startLayer { background: rgba(7,7,15,0.5); backdrop-filter: blur(2px); }
+  #overLayer { background: rgba(7,7,15,0.82); backdrop-filter: blur(4px); display: none; }
+  .layer h1 { font-size: clamp(28px, 8vw, 40px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  .layer h1 .o { color: var(--gold); }
+  .layer h2 { font-size: 52px; font-weight: 700; color: var(--gold); font-family: 'Space Mono', monospace; }
+  .layer .sub { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: var(--mut); text-transform: uppercase; }
+  .layer .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); } .layer .info b { color: var(--gold); }
+  .layer button { margin-top: 4px; padding: 14px 36px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="wrap">
+  <canvas id="game" width="440" height="660"></canvas>
+  <div class="layer" id="startLayer">
+    <h1>Tiro con arc<span class="o">o</span></h1>
+    <div class="sub">arrastrá, apuntá y soltá</div>
+    <button id="startBtn">empezar</button>
+  </div>
+  <div class="layer" id="overLayer">
+    <div class="sub">ronda terminada</div>
+    <h2 id="ovScore">0</h2>
+    <div class="info" id="ovInfo">puntos · récord 0</div>
+    <button id="againBtn">tirar de nuevo</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Tiro con arc<span class="o">o</span></h2>
+    <ol>
+      <li><b>Mantené y arrastrá hacia atrás</b> desde el arco para apuntar: la línea muestra la dirección y la fuerza.</li>
+      <li><b>Soltá</b> para disparar. La flecha cae por la gravedad y el <b>viento</b> la empuja.</li>
+      <li>Clavá lo más cerca del <b>centro dorado</b> (10 puntos). Tenés <b>6 flechas</b>.</li>
+    </ol>
+    <button id="helpClose">¡a tirar!</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const startLayer = document.getElementById('startLayer');
+  const overLayer = document.getElementById('overLayer');
+  const ARROWS = 6;
+  const G = 0.16; // gravity
+  const anchor = { x: 64, y: H - 110 };
+  const target = { x: W - 64, y: H * 0.40, r: 72, baseY: H * 0.40 };
+
+  let arrowsLeft, score, levelScore, level, need, wind, windMax, arrow, flying, aiming, aim, hits, over, playing, anim;
+  let targetMove, targetAmp, targetSpeed, targetPhase, levelBannerT;
+  let best = parseInt(localStorage.getItem('arcoBest')||'0',10)||0;
+  let bestLevel = parseInt(localStorage.getItem('arcoLevel')||'0',10)||0;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxShoot=()=>{ tone(680,0.07,'triangle',0.05); setTimeout(()=>tone(420,0.06,'sine',0.03),40); };
+  const sfxHit=(s)=>{ if(s>=9){[660,880,1100].forEach((f,i)=>setTimeout(()=>tone(f,0.14,'square',0.05),i*70));} else if(s>0){tone(440,0.1,'triangle',0.05);} else {tone(150,0.16,'sawtooth',0.05);} };
+  const sfxEnd=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'sine',0.06),i*110));
+
+  function reset() {
+    level=1; score=0; over=false; playing=true;
+    applyDifficulty(); startLevel();
+    startLayer.style.display='none'; overLayer.style.display='none';
+    cancelAnimationFrame(anim); frame();
+  }
+  function applyDifficulty() {
+    target.r = Math.max(34, 72-(level-1)*5);
+    windMax = Math.min(0.22, 0.06+(level-1)*0.025);
+    targetMove = level>=2;
+    targetAmp = Math.min(H*0.20, 18+level*12);
+    targetSpeed = 0.010+level*0.004;
+    need = Math.min(46, 16+level*4);
+  }
+  function startLevel() {
+    arrowsLeft=ARROWS; levelScore=0; hits=[]; flying=false; aiming=false; arrow=null;
+    targetPhase=0; target.y=target.baseY; levelBannerT=performance.now();
+    newWind();
+  }
+  function newWind() { wind = (Math.random()*2-1) * windMax; }
+  const bannerActive = () => performance.now()-levelBannerT < 1100;
+  function frame() {
+    if (!playing) return;
+    if (targetMove && !bannerActive()) { targetPhase += targetSpeed; target.y = target.baseY + Math.sin(targetPhase)*targetAmp; }
+    if (flying) stepArrow();
+    draw();
+    anim = requestAnimationFrame(frame);
+  } // vertical wind accel
+
+  function ringScore(dx, dy) {
+    const d = Math.hypot(dx, dy);
+    if (d > target.r) return 0;
+    // 5 rings: r/5 each -> 10,9,8,9? Use 10 at center scaling
+    const ring = Math.max(1, Math.ceil(d / (target.r/5))); // 1..5
+    return [10,9,8,7,6][Math.min(ring-1,4)];
+  }
+
+  function shoot(power, ang) {
+    flying=true;
+    const sp = Math.min(power, 150) * 0.13;
+    arrow = { x: anchor.x, y: anchor.y, vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp, ang };
+    sfxShoot();
+  }
+  function stepArrow() {
+    arrow.vy += G + wind;
+    arrow.x += arrow.vx; arrow.y += arrow.vy;
+    arrow.ang = Math.atan2(arrow.vy, arrow.vx);
+    if (arrow.vx>0 && arrow.x >= target.x) {
+      registerHit(arrow.x, arrow.y, ringScore(arrow.x - target.x, arrow.y - target.y));
+    } else if (arrow.y > H+40 || arrow.x > W+40 || arrow.x < -40) {
+      registerHit(arrow.x, Math.min(arrow.y,H-20), 0);
+    }
+  }
+
+  function registerHit(x, y, s) {
+    flying=false;
+    score += s; levelScore += s; sfxHit(s);
+    hits.push({ x: Math.min(x,target.x+6), y, s });
+    arrowsLeft--; arrow=null;
+    flashScore = { x, y: y-10, s, t: performance.now() };
+    if (levelScore>=need) { setTimeout(nextLevel, 950); return; }
+    if (arrowsLeft<=0) { setTimeout(end, 950); return; }
+    newWind();
+  }
+  function nextLevel() {
+    if (!playing) return;
+    level++; applyDifficulty(); startLevel();
+    [659,880,1175].forEach((f,i)=>setTimeout(()=>tone(f,0.16,'square',0.05),i*90));
+  }
+  let flashScore=null;
+
+  function drawTarget() {
+    const colors=['#ffcb52','#fff','#ff5e6c','#4d8dff','#2ee6a0'];
+    // post
+    ctx.strokeStyle='#5a4a30'; ctx.lineWidth=8; ctx.beginPath(); ctx.moveTo(target.x, target.y+target.r); ctx.lineTo(target.x, H-30); ctx.stroke();
+    for (let i=5;i>=1;i--){
+      const rr = target.r * i/5;
+      ctx.beginPath(); ctx.arc(target.x, target.y, rr, 0, Math.PI*2);
+      ctx.fillStyle = i%2===0 ? '#11111e' : colors[5-i];
+      // ring bands: outer to inner alternate
+      ctx.fillStyle = ['#2b3550','#3a4a6a','#cc4a56','#e8e8ee','#ffcb52'][5-i];
+      ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    ctx.fillStyle='#07070f'; ctx.beginPath(); ctx.arc(target.x, target.y, 5, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawArcher() {
+    // bow
+    ctx.strokeStyle='#caa15a'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 28, -Math.PI*0.6, Math.PI*0.6); ctx.stroke();
+    // string
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5;
+    const topY=anchor.y-23, botY=anchor.y+23, sx=anchor.x+22;
+    if (aiming && aim) {
+      ctx.beginPath(); ctx.moveTo(sx, topY); ctx.lineTo(aim.bx, aim.by); ctx.lineTo(sx, botY); ctx.stroke();
+    } else { ctx.beginPath(); ctx.moveTo(sx, topY); ctx.lineTo(sx, botY); ctx.stroke(); }
+  }
+
+  function draw() {
+    // sky
+    const grd = ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0,'#13213d'); grd.addColorStop(1,'#0c1526');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+    // ground
+    ctx.fillStyle='#15351f'; ctx.fillRect(0,H-30,W,30);
+    drawTarget();
+    drawArcher();
+    // arrows already stuck
+    for (const h of hits) drawArrowAt(h.x, h.y, 0, true);
+    // wind indicator
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='13px Space Mono, monospace'; ctx.textAlign='left';
+    const dir = wind<0 ? '↑' : '↓'; const strength = windMax ? Math.abs(wind/windMax) : 0;
+    ctx.fillText('viento '+dir+' '+('●'.repeat(Math.max(1,Math.round(strength*3)))), 14, 26);
+    ctx.fillStyle = levelScore>=need ? '#2ee6a0' : 'rgba(255,255,255,0.7)';
+    ctx.fillText('meta '+levelScore+'/'+need, 14, 46);
+    // hud
+    ctx.textAlign='right'; ctx.fillStyle='#ffcb52'; ctx.font='bold 16px Space Mono, monospace';
+    ctx.fillText('nivel '+level, W-14, 26);
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='13px Space Mono, monospace';
+    ctx.fillText('🏹 '.repeat(arrowsLeft), W-14, 46);
+    // aiming trajectory + arrow nocked
+    if (aiming && aim) {
+      drawTrajectory(aim.power, aim.ang);
+      drawArrowAt(anchor.x, anchor.y, aim.ang, false);
+    } else if (!flying && !over) {
+      drawArrowAt(anchor.x, anchor.y, -0.35, false);
+    }
+    if (flying && arrow) drawArrowAt(arrow.x, arrow.y, arrow.ang, false);
+    // floating score
+    if (flashScore) {
+      const age = performance.now()-flashScore.t;
+      if (age>900) flashScore=null;
+      else { ctx.globalAlpha=1-age/900; ctx.fillStyle=flashScore.s>=9?'#ffcb52':flashScore.s>0?'#2ee6a0':'#ff5e6c'; ctx.font='bold 30px Space Mono, monospace'; ctx.textAlign='center'; ctx.fillText(flashScore.s>0?'+'+flashScore.s:'fallaste', flashScore.x, flashScore.y - age*0.03); ctx.globalAlpha=1; }
+    }
+    // level banner
+    if (bannerActive() && !over) {
+      ctx.fillStyle='rgba(7,7,15,0.55)'; ctx.fillRect(0,H*0.34,W,90);
+      ctx.fillStyle='#ffcb52'; ctx.font='bold 36px Space Grotesk, sans-serif'; ctx.textAlign='center';
+      ctx.fillText('NIVEL '+level, W/2, H*0.40);
+      ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font='13px Space Mono, monospace';
+      ctx.fillText('necesitás '+need+' pts'+(targetMove?' · ¡blanco móvil!':''), W/2, H*0.40+26);
+    }
+  }
+
+  function drawTrajectory(power, ang) {
+    const sp = Math.min(power,150)*0.13;
+    let x=anchor.x, y=anchor.y, vx=Math.cos(ang)*sp, vy=Math.sin(ang)*sp;
+    ctx.fillStyle='rgba(255,203,82,0.5)';
+    for (let i=0;i<40;i++){ vy+=G+wind; x+=vx; y+=vy; if(i%2===0){ ctx.beginPath(); ctx.arc(x,y,2.2,0,Math.PI*2); ctx.fill(); } if(x>target.x||y>H) break; }
+  }
+  function drawArrowAt(x,y,ang,stuck) {
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.strokeStyle = stuck? '#d8d8e0' : '#ffcb52'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(8,0); ctx.stroke();
+    // head
+    ctx.fillStyle='#e8e8ee'; ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(2,-4); ctx.lineTo(2,4); ctx.closePath(); ctx.fill();
+    // fletching
+    ctx.strokeStyle = stuck?'#9a9aae':'#ff5e6c'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(-26,-4); ctx.moveTo(-22,0); ctx.lineTo(-26,4); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- aiming via drag (slingshot: pull back, shoot opposite) ----
+  function toCanvas(clientX, clientY) { const r=canvas.getBoundingClientRect(); return { x:(clientX-r.left)/r.width*W, y:(clientY-r.top)/r.height*H }; }
+  function startAim(p) { if(flying||over||arrowsLeft<=0||bannerActive()) return; aiming=true; updateAim(p); }
+  function updateAim(p) {
+    if (!aiming) return;
+    const dx = anchor.x - p.x, dy = anchor.y - p.y; // pull vector (from pointer to anchor) = shot dir
+    const power = Math.hypot(dx,dy);
+    const ang = Math.atan2(dy,dx);
+    aim = { power, ang, bx: p.x, by: p.y };
+    draw();
+  }
+  function release() {
+    if (!aiming) return; aiming=false;
+    if (aim && aim.power>18) { const a=aim; aim=null; shoot(a.power, a.ang); }
+    else { aim=null; draw(); }
+  }
+  canvas.addEventListener('pointerdown', e=>{ initAudio(); startAim(toCanvas(e.clientX,e.clientY)); });
+  canvas.addEventListener('pointermove', e=>{ if(aiming) updateAim(toCanvas(e.clientX,e.clientY)); });
+  window.addEventListener('pointerup', release);
+
+  function end() {
+    over=true; playing=false; cancelAnimationFrame(anim);
+    if (score>best){ best=score; localStorage.setItem('arcoBest',String(best)); }
+    if (level>bestLevel){ bestLevel=level; localStorage.setItem('arcoLevel',String(bestLevel)); }
+    sfxEnd();
+    document.getElementById('ovScore').textContent=score;
+    document.querySelector('#overLayer .sub').textContent='llegaste al nivel '+level;
+    document.getElementById('ovInfo').innerHTML = `puntos · récord <b>${best}</b> · mejor nivel <b>${bestLevel}</b>`;
+    setTimeout(()=>overLayer.style.display='flex',600);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{ initAudio(); reset(); });
+  document.getElementById('againBtn').addEventListener('click', ()=>{ initAudio(); reset(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', e=>{ e.stopPropagation(); helpEl.style.display='flex'; });
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('arcoSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('arcoSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+
+  // initial paint
+  level=1; score=0; levelScore=0; need=20; arrowsLeft=ARROWS; hits=[]; windMax=0.06; targetMove=false; targetAmp=0; targetSpeed=0; targetPhase=0; levelBannerT=0; wind=0; draw();
+</script>
+</body>
+</html>

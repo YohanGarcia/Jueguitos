@@ -8,12 +8,12 @@
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
   body {
     background: #05060f;
-    display: flex; justify-content: center; align-items: center; height: 100vh;
+    display: flex; justify-content: center; align-items: center; height: 100dvh;
     font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden;
   }
   canvas {
     border-radius: 16px; box-shadow: 0 0 60px rgba(46, 230, 255, 0.18);
-    width: 520px; height: 820px; max-width: 98vw; max-height: 92vh; touch-action: none;
+    width: auto; height: auto; aspect-ratio: 520 / 820; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); touch-action: none;
   }
   #ui {
     position: absolute; top: 16px; left: 50%; transform: translateX(-50%);

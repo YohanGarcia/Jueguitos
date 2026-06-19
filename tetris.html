@@ -11,7 +11,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 100dvh;
     font-family: 'Segoe UI', system-ui, sans-serif;
     overflow: hidden;
   }
@@ -23,10 +23,11 @@
   canvas#board {
     border-radius: 12px;
     box-shadow: 0 0 60px rgba(0, 200, 255, 0.12);
-    width: 500px;
-    height: 650px;
-    max-width: 60vw;
-    max-height: 90vh;
+    width: auto;
+    height: auto;
+    aspect-ratio: 500 / 650;
+    max-width: min(60vw, 500px);
+    max-height: calc(100dvh - 32px);
   }
   #sidebar {
     display: flex;
@@ -135,7 +136,7 @@
   @media (hover: none) and (pointer: coarse) {
     #touchControls { display: flex; flex-direction: column; align-items: center; }
     #sidebar { display: none; }
-    canvas#board { max-width: 95vw; max-height: 65vh; }
+    canvas#board { max-width: calc(100vw - 24px); max-height: 65dvh; }
     #mobileUI { display: flex !important; }
   }
   #mobileUI {

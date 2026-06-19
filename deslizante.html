@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔢 Deslizante</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(92vw, 400px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .hud { width: 100%; display: flex; justify-content: space-around; }
+  .stat { text-align: center; }
+  .stat .v { font-family: 'Space Mono', monospace; font-size: clamp(24px, 6.5vw, 30px); font-weight: 700; line-height: 1; }
+  .stat .v.gold { color: var(--gold); } .stat .v.green { color: var(--green); }
+  .stat .k { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--mut2); text-transform: uppercase; margin-top: 6px; }
+  #boardWrap { width: 100%; background: var(--bg2); border: 1px solid var(--line); border-radius: 16px; padding: 8px; }
+  #board { position: relative; width: 100%; aspect-ratio: 1; }
+  .tile { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: linear-gradient(160deg, #232342, #1a1a30); border: 1px solid var(--line-hi); font-family: 'Space Mono', monospace; font-weight: 700; font-size: clamp(22px, 7vw, 32px); cursor: pointer; transition: left .14s ease, top .14s ease, background .14s; }
+  .tile.right { background: linear-gradient(160deg, rgba(46,230,160,0.22), rgba(46,230,160,0.08)); border-color: rgba(46,230,160,0.4); color: var(--green); }
+  #board.solved .tile { background: linear-gradient(160deg, rgba(255,203,82,0.24), rgba(255,203,82,0.08)); border-color: var(--gold); color: var(--gold); }
+  .controls { display: flex; gap: 10px; }
+  button.act { padding: 12px 26px; border: 1px solid var(--line-hi); border-radius: 999px; background: var(--bg2); color: var(--txt); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  button.act.primary { background: var(--gold); color: #07070f; border-color: var(--gold); }
+  button.act:hover { border-color: var(--gold); }
+  #msg { min-height: 20px; font-size: 15px; font-weight: 600; color: var(--green); text-align: center; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Deslizan<span class="o">t</span>e</h1>
+    <div class="sub">ordená del 1 al 15</div>
+  </header>
+  <div class="hud">
+    <div class="stat"><div class="v green" id="moves">0</div><div class="k">movimientos</div></div>
+    <div class="stat"><div class="v" id="time">0:00</div><div class="k">tiempo</div></div>
+    <div class="stat"><div class="v gold" id="best">—</div><div class="k">mejor</div></div>
+  </div>
+  <div id="boardWrap"><div id="board"></div></div>
+  <div id="msg"></div>
+  <div class="controls">
+    <button class="act primary" id="shuffleBtn">mezclar</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Deslizan<span class="o">t</span>e</h2>
+    <ol>
+      <li>Tocá una ficha <b>contigua al hueco</b> para deslizarla.</li>
+      <li>Ordená los números <b>del 1 al 15</b> con el hueco abajo a la derecha.</li>
+      <li>Resolvelo en la <b>menor cantidad de movimientos</b>. En compu podés usar las flechas.</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const N = 4;
+  const boardEl = document.getElementById('board');
+  const movesEl = document.getElementById('moves');
+  const timeEl = document.getElementById('time');
+  const bestEl = document.getElementById('best');
+  const msgEl = document.getElementById('msg');
+  let tiles, moves, solved, timer, tInt, started;
+  let best = parseInt(localStorage.getItem('deslizanteBest')||'0',10)||0;
+  bestEl.textContent = best>0 ? best : '—';
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.04){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxSlide = () => tone(360,0.05,'triangle',0.03);
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+
+  // tiles: array length 16, value 0 = blank
+  function solvedState() { return [...Array(15)].map((_,i)=>i+1).concat(0); }
+  function isSolved() { const s=solvedState(); return tiles.every((v,i)=>v===s[i]); }
+
+  function inversions(arr) { const a=arr.filter(v=>v!==0); let inv=0; for(let i=0;i<a.length;i++) for(let j=i+1;j<a.length;j++) if(a[i]>a[j]) inv++; return inv; }
+  function blankRowFromBottom(arr){ const idx=arr.indexOf(0); const row=Math.floor(idx/N); return N-row; }
+  function isSolvable(arr) { const inv=inversions(arr); const br=blankRowFromBottom(arr); return (br%2===0) ? (inv%2===1) : (inv%2===0); }
+
+  function shuffle() {
+    let arr;
+    do { arr = solvedState(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } } while(!isSolvable(arr) || arr.every((v,i)=>v===solvedState()[i]));
+    tiles = arr; moves=0; solved=false; started=false;
+    movesEl.textContent='0'; timeEl.textContent='0:00'; msgEl.textContent='';
+    clearInterval(tInt); timer=0;
+    boardEl.classList.remove('solved');
+    render();
+  }
+
+  function startTimer(){ if(started) return; started=true; tInt=setInterval(()=>{ timer++; const m=Math.floor(timer/60), s=timer%60; timeEl.textContent=m+':'+String(s).padStart(2,'0'); },1000); }
+
+  function render() {
+    boardEl.innerHTML='';
+    const gap = 2; // percent
+    const size = (100 - gap*(N-1)) / N;
+    tiles.forEach((v, i) => {
+      if (v===0) return;
+      const r=Math.floor(i/N), c=i%N;
+      const t=document.createElement('div'); t.className='tile';
+      t.textContent=v;
+      t.style.width=size+'%'; t.style.height=size+'%';
+      t.style.left=(c*(size+gap))+'%'; t.style.top=(r*(size+gap))+'%';
+      if (v === i+1) t.classList.add('right');
+      t.addEventListener('click',()=>{ initAudio(); tryMove(i); });
+      boardEl.appendChild(t);
+    });
+  }
+
+  function tryMove(i) {
+    if (solved) return;
+    const blank = tiles.indexOf(0);
+    const r=Math.floor(i/N), c=i%N, br=Math.floor(blank/N), bc=blank%N;
+    if ((r===br && Math.abs(c-bc)===1) || (c===bc && Math.abs(r-br)===1)) {
+      [tiles[i], tiles[blank]] = [tiles[blank], tiles[i]];
+      moves++; movesEl.textContent=moves; sfxSlide(); startTimer(); render();
+      if (isSolved()) win();
+    }
+  }
+  // arrow keys move the tile that slides INTO the blank
+  function moveByDir(dr, dc) {
+    if (solved) return;
+    const blank=tiles.indexOf(0), br=Math.floor(blank/N), bc=blank%N;
+    const tr=br+dr, tc=bc+dc;
+    if (tr<0||tr>=N||tc<0||tc>=N) return;
+    tryMove(tr*N+tc);
+  }
+
+  function win() {
+    solved=true; clearInterval(tInt);
+    boardEl.classList.add('solved'); sfxWin();
+    const record = best===0 || moves<best;
+    if (record) { best=moves; localStorage.setItem('deslizanteBest',String(best)); bestEl.textContent=best; }
+    msgEl.textContent = record ? `¡Resuelto en ${moves}! Nuevo récord 🎉` : `¡Resuelto en ${moves} movimientos!`;
+  }
+
+  document.getElementById('shuffleBtn').addEventListener('click', ()=>{ initAudio(); shuffle(); });
+  document.addEventListener('keydown', e=>{
+    const map={ArrowUp:[1,0],ArrowDown:[-1,0],ArrowLeft:[0,1],ArrowRight:[0,-1]};
+    if (map[e.key]) { e.preventDefault(); initAudio(); moveByDir(...map[e.key]); }
+  });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('deslizanteSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('deslizanteSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  shuffle();
+</script>
+</body>
+</html>

@@ -2,410 +2,202 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🏴‍☠️ Ahorcado</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🪢 Ahorcado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-body {
-  background: #0a0a12;
-  display: flex; justify-content: center; align-items: center;
-  min-height: 100vh; overflow: hidden;
-  font-family: 'Segoe UI', system-ui, sans-serif; color: #fff;
-}
-#menuLink {
-  position: absolute; top: 16px; left: 16px;
-  padding: 8px 18px; border: none; border-radius: 30px;
-  background: rgba(255,255,255,0.08); color: #fff;
-  font-size: 14px; font-weight: 600; cursor: pointer; z-index: 5;
-  text-decoration: none; transition: background 0.15s;
-}
-#menuLink:hover { background: rgba(255,255,255,0.18); }
-#app { width: min(98vw, 900px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.head { display: flex; width: 100%; gap: 10px; }
-.scorebox {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1;
-}
-.scorebox .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
-.scorebox .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.scorebox.best .v { color: #fbbf24; }
-#boardWrap { position: relative; width: 100%; }
-canvas {
-  display: block; width: 100%; height: auto; touch-action: none; border-radius: 16px;
-  max-width: 98vw; max-height: 86vh;
-}
-#overlay {
-  position: absolute; inset: 0; display: none;
-  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  background: rgba(8,8,20,0.85); border-radius: 16px; backdrop-filter: blur(4px);
-  text-align: center; z-index: 3;
-}
-#overlay h2 { font-size: 38px; letter-spacing: 2px; }
-#overlay h2.win { color: #4ade80; }
-#overlay h2.lose { color: #ff5d5d; }
-#overlay p { font-size: 15px; color: rgba(255,255,255,0.5); }
-#overlay .final { font-size: 26px; color: #fbbf24; font-weight: 700; margin-top: 4px; }
-#overlay .btns { display: flex; gap: 10px; margin-top: 6px; }
-#overlay button {
-  padding: 11px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
-  transition: transform 0.12s;
-}
-#overlay button:hover { transform: scale(1.04); }
-#againBtn { background: #fbbf24; color: #0a0a12; }
-.hint { font-size: 12px; color: rgba(255,255,255,0.22); text-align: center; width: 100%; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; --red:#ff5e6c; --key:#2c2c40; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { width: min(94vw, 460px); height: 100dvh; display: flex; flex-direction: column; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); gap: 10px; }
+  header { text-align: center; margin-top: 38px; flex: none; }
+  header h1 { font-size: clamp(24px, 6.5vw, 32px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px; flex: none; }
+  .cat { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--mut); }
+  .cat b { color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; }
+  .lives { display: flex; gap: 4px; }
+  .heart { font-size: 16px; transition: opacity .2s, transform .2s; }
+  .heart.lost { opacity: 0.22; transform: scale(0.8); }
+  /* gallows */
+  #stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+  svg.gallows { width: auto; height: 100%; max-height: min(34vh, 240px); }
+  .gl { stroke: var(--mut2); stroke-width: 6; stroke-linecap: round; fill: none; }
+  .man { stroke: var(--red); stroke-width: 6; stroke-linecap: round; fill: none; opacity: 0; transition: opacity .3s; }
+  .man.show { opacity: 1; }
+  /* word */
+  #word { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; flex: none; padding: 4px 0 6px; }
+  .slot { width: clamp(26px, 8vw, 38px); height: clamp(34px, 10vw, 48px); border-bottom: 3px solid var(--line-hi); display: flex; align-items: center; justify-content: center; font-size: clamp(20px, 6vw, 28px); font-weight: 700; text-transform: uppercase; }
+  .slot.filled { border-color: var(--green); }
+  .slot.miss { border-color: var(--red); color: var(--red); }
+  #msg { min-height: 22px; text-align: center; font-size: 15px; font-weight: 600; flex: none; }
+  #msg.win { color: var(--green); } #msg.lose { color: var(--red); }
+  /* keyboard */
+  #kb { display: flex; flex-direction: column; gap: 6px; flex: none; padding-bottom: 2px; }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .key { flex: 1; min-width: 0; height: 46px; display: flex; align-items: center; justify-content: center; background: var(--key); border: none; border-radius: 7px; color: var(--txt); font-family: inherit; font-size: 15px; font-weight: 600; text-transform: uppercase; cursor: pointer; transition: background .12s, transform .08s, color .12s; }
+  .key:active { transform: scale(0.92); }
+  .key.good { background: var(--green); color: #07070f; }
+  .key.bad { background: #18182a; color: var(--mut2); }
+  #againBtn { display: none; padding: 12px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; flex: none; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
 </style>
 </head>
 <body>
 <a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
 <div id="app">
-  <div class="head">
-    <div class="scorebox"><div class="lbl">palabra</div><div class="v" id="wordNum">1</div></div>
-    <div class="scorebox"><div class="lbl">errores</div><div class="v" id="errorsDisplay">0/6</div></div>
-    <div class="scorebox"><div class="lbl">puntos</div><div class="v" id="scoreDisplay">0</div></div>
-    <div class="scorebox best"><div class="lbl">récord</div><div class="v" id="bestDisplay">0</div></div>
+  <header><h1>Ahorc<span class="o">a</span>do</h1></header>
+  <div class="top">
+    <div class="cat">categoría · <b id="cat">—</b></div>
+    <div class="lives" id="lives"></div>
   </div>
-  <div id="boardWrap">
-    <canvas id="c" width="1000" height="620"></canvas>
-    <div id="overlay">
-      <h2 id="ovTitle">🏴‍☠️</h2>
-      <p id="ovSub"></p>
-      <div class="final" id="ovFinal"></div>
-      <div class="btns"><button id="againBtn">jugar de nuevo</button></div>
-    </div>
+  <div id="stage">
+    <svg class="gallows" viewBox="0 0 200 240">
+      <line class="gl" x1="20" y1="230" x2="110" y2="230"/>
+      <line class="gl" x1="50" y1="230" x2="50" y2="20"/>
+      <line class="gl" x1="50" y1="20" x2="140" y2="20"/>
+      <line class="gl" x1="140" y1="20" x2="140" y2="50"/>
+      <circle class="man" id="p0" cx="140" cy="68" r="18"/>
+      <line class="man" id="p1" x1="140" y1="86" x2="140" y2="150"/>
+      <line class="man" id="p2" x1="140" y1="100" x2="112" y2="125"/>
+      <line class="man" id="p3" x1="140" y1="100" x2="168" y2="125"/>
+      <line class="man" id="p4" x1="140" y1="150" x2="116" y2="185"/>
+      <line class="man" id="p5" x1="140" y1="150" x2="164" y2="185"/>
+    </svg>
   </div>
-  <div class="hint">presioná una letra en el teclado · click en la letra en pantalla · R · Escape</div>
+  <div id="word"></div>
+  <div id="msg"></div>
+  <button id="againBtn">otra palabra</button>
+  <div id="kb"></div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Ahorc<span class="o">a</span>do</h2>
+    <ol>
+      <li>Adiviná la <b>palabra oculta</b> eligiendo letras del teclado.</li>
+      <li>Cada <b>letra errada</b> dibuja una parte del muñeco. Tenés <b>6 fallos</b>.</li>
+      <li>Completá la palabra antes de que se dibuje entero. La <b>categoría</b> es tu pista.</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
 </div>
 
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const W = 1000, H = 620;
+  const BANK = [
+    { cat:'animales', words:['ELEFANTE','JIRAFA','COCODRILO','MARIPOSA','PINGUINO','CABALLO','TIBURON','ARDILLA','MURCIELAGO','TORTUGA','CANGURO','DELFIN'] },
+    { cat:'frutas', words:['MANZANA','SANDIA','FRUTILLA','DURAZNO','CIRUELA','NARANJA','BANANA','CEREZA','MELON','LIMON'] },
+    { cat:'países', words:['ARGENTINA','URUGUAY','BRASIL','CANADA','JAPON','ESPANA','MEXICO','FRANCIA','ITALIA','PORTUGAL'] },
+    { cat:'deportes', words:['FUTBOL','TENIS','NATACION','BOXEO','VOLEY','CICLISMO','HOCKEY','BASQUET','RUGBY','ESGRIMA'] },
+    { cat:'profesiones', words:['MEDICO','INGENIERO','MAESTRA','BOMBERO','PILOTO','COCINERO','ABOGADO','PINTOR','ENFERMERA','CARPINTERO'] },
+  ];
+  const MAX = 6;
+  const wordEl = document.getElementById('word');
+  const kbEl = document.getElementById('kb');
+  const msgEl = document.getElementById('msg');
+  const livesEl = document.getElementById('lives');
+  const catEl = document.getElementById('cat');
+  const againBtn = document.getElementById('againBtn');
+  let answer, guessed, wrong, over;
 
-const WORDS = [
-  'CASA','PERRO','GATO','ARBOL','SOL','LUNA','AGUA','FUEGO','TIERRA','VIENTO',
-  'PLAYA','MONTAÑA','RIO','LAGO','MAR','CIELO','ESTRELLA','NUBE','LLUVIA','NIEVE',
-  'MANZANA','NARANJA','UVA','FRUTA','PAN','LECHE','HUEVO','JAMON',
-  'FELIZ','AMOR','PAZ','SUERTE','VIDA','JUEGO','MUSICA','LIBRO','RISA',
-  'ROJO','AZUL','VERDE','BLANCO','NEGRO','DORADO','ROSA',
-  'ELEFANTE','TIBURON','BALLENA','AGUILA','SERPIENTE','MARIPOSA',
-  'PIRATA','TESORO','MAPACHE','VOLCAN','DESIERTO','JARDIN',
-  'BICICLETA','CAMINO','PUENTE','CASTILLO','VENTANA','ESPADA',
-  'CABALLERO','DRAGON','MAGIA','ESTRELLA','COMETA','COHETE',
-];
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxGood = () => tone(560,0.08,'triangle',0.04);
+  const sfxBad = () => tone(150,0.16,'sawtooth',0.05);
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+  const sfxLose = () => [330,247,165].forEach((f,i)=>setTimeout(()=>tone(f,0.25,'sawtooth',0.05),i*140));
 
-const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM'];
-
-let palabra = '';
-let revealed = [];
-let guessed = [];
-let errors = 0;
-let maxErrors = 6;
-let score = 0;
-let best = 0;
-let wordCount = 0;
-let gameOver = false;
-let won = false;
-let keyButtons = [];
-
-let actx;
-function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
-function tone(f, d, t = 'sine', v = 0.05) {
-  if (!actx) return;
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type = t; o.frequency.value = f;
-  g.gain.setValueAtTime(v, actx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
-  o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
-}
-function sfxCorrect() { tone(500, 0.06, 'triangle', 0.03); setTimeout(() => tone(700, 0.08, 'triangle', 0.03), 60); }
-function sfxError() { tone(200, 0.12, 'sawtooth', 0.04); }
-function sfxWin() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.1,'square',0.04), i*80)); }
-function sfxLose() { [392,330,262,196].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'sawtooth',0.04), i*100)); }
-
-function pickWord() {
-  const prev = palabra;
-  let w;
-  do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (w === prev && WORDS.length > 1);
-  palabra = w;
-  revealed = Array(palabra.length).fill(false);
-}
-
-function guessLetter(letter) {
-  if (gameOver) return;
-  initAudio();
-  letter = letter.toUpperCase();
-  if (guessed.includes(letter) || letter.length !== 1) return;
-  guessed.push(letter);
-
-  let found = false;
-  for (let i = 0; i < palabra.length; i++) {
-    if (palabra[i] === letter) { revealed[i] = true; found = true; }
-  }
-
-  if (found) {
-    sfxCorrect();
-    // Check win
-    if (revealed.every(r => r)) {
-      won = true;
-      gameOver = true;
-      const pts = Math.max(10, 30 - errors * 3);
-      score += pts;
-      if (score > best) { best = score; localStorage.setItem('ahorcadoBest', best.toString()); }
-      sfxWin();
-      updateUI();
-      setTimeout(() => {
-        document.getElementById('ovTitle').className = 'win';
-        document.getElementById('ovTitle').textContent = '🏴‍☠️ ¡SALVASTE!';
-        document.getElementById('ovSub').textContent = `"${palabra}" · +${pts} pts`;
-        document.getElementById('ovFinal').textContent = `🏆 ${score} pts`;
-        document.getElementById('overlay').style.display = 'flex';
-      }, 500);
-    }
-  } else {
-    errors++;
-    sfxError();
-    if (errors >= maxErrors) {
-      gameOver = true;
-      if (score > best) { best = score; localStorage.setItem('ahorcadoBest', best.toString()); }
-      sfxLose();
-      updateUI();
-      setTimeout(() => {
-        document.getElementById('ovTitle').className = 'lose';
-        document.getElementById('ovTitle').textContent = '🏴‍☠️ AHORCADO';
-        document.getElementById('ovSub').textContent = `la palabra era "${palabra}"`;
-        document.getElementById('ovFinal').textContent = `puntos: ${score}`;
-        document.getElementById('overlay').style.display = 'flex';
-      }, 500);
+  const KB_ROWS = ['QWERTYUIOP','ASDFGHJKLÑ','ZXCVBNM'];
+  function buildKb() {
+    kbEl.innerHTML='';
+    for (const r of KB_ROWS) {
+      const row=document.createElement('div'); row.className='krow';
+      for (const ch of r) { const k=document.createElement('button'); k.className='key'; k.textContent=ch; k.dataset.k=ch; k.addEventListener('click',()=>{ initAudio(); guess(ch); }); row.appendChild(k); }
+      kbEl.appendChild(row);
     }
   }
-  updateUI();
-}
+  function keyEl(ch){ return kbEl.querySelector(`.key[data-k="${ch}"]`); }
 
-function nextWord() {
-  wordCount++;
-  errors = 0;
-  guessed = [];
-  won = false;
-  gameOver = false;
-  pickWord();
-  updateUI();
-}
-
-function updateUI() {
-  document.getElementById('wordNum').textContent = wordCount;
-  document.getElementById('errorsDisplay').textContent = `${errors}/${maxErrors}`;
-  document.getElementById('scoreDisplay').textContent = score;
-  document.getElementById('bestDisplay').textContent = best;
-}
-
-function init() {
-  score = 0; wordCount = 0; errors = 0; guessed = []; gameOver = false; won = false;
-  best = parseInt(localStorage.getItem('ahorcadoBest') || '0', 10);
-  document.getElementById('overlay').style.display = 'none';
-  nextWord();
-}
-
-function drawHangman() {
-  const bx = 60, by = 80;
-  ctx.save();
-  ctx.translate(bx, by);
-
-  ctx.strokeStyle = '#fbbf24';
-  ctx.lineWidth = 3;
-
-  // Base
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(0, 360); ctx.lineTo(140, 360); ctx.stroke();
-  // Post
-  ctx.beginPath(); ctx.moveTo(40, 360); ctx.lineTo(40, 20); ctx.stroke();
-  // Top
-  ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(100, 20); ctx.stroke();
-  // Rope
-  ctx.beginPath(); ctx.moveTo(100, 20); ctx.lineTo(100, 60); ctx.stroke();
-
-  ctx.lineWidth = 2.5;
-  // Body parts
-  const parts = [];
-  if (errors >= 1) parts.push(() => { // Head
-    ctx.beginPath(); ctx.arc(100, 80, 20, 0, Math.PI * 2); ctx.stroke();
-    // Face
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(92, 76, 4, 4); ctx.fillRect(104, 76, 4, 4);
-    ctx.beginPath(); ctx.arc(100, 86, 6, 0, Math.PI); ctx.stroke();
-  });
-  if (errors >= 2) parts.push(() => { // Body
-    ctx.beginPath(); ctx.moveTo(100, 100); ctx.lineTo(100, 200); ctx.stroke();
-  });
-  if (errors >= 3) parts.push(() => { // Left arm
-    ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(60, 160); ctx.stroke();
-  });
-  if (errors >= 4) parts.push(() => { // Right arm
-    ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(140, 160); ctx.stroke();
-  });
-  if (errors >= 5) parts.push(() => { // Left leg
-    ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(65, 270); ctx.stroke();
-  });
-  if (errors >= 6) parts.push(() => { // Right leg
-    ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(135, 270); ctx.stroke();
-  });
-
-  for (const p of parts) p();
-
-  // Rope tension
-  if (gameOver && !won) {
-    ctx.strokeStyle = '#ff5d5d';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath(); ctx.moveTo(100, 60); ctx.lineTo(100, errors >= 1 ? 60 : 100); ctx.stroke();
-    ctx.setLineDash([]);
+  function newGame() {
+    const set = BANK[Math.floor(Math.random()*BANK.length)];
+    answer = set.words[Math.floor(Math.random()*set.words.length)];
+    catEl.textContent = set.cat;
+    guessed = new Set(); wrong = 0; over = false;
+    msgEl.textContent=''; msgEl.className=''; againBtn.style.display='none';
+    document.querySelectorAll('.man').forEach(m=>m.classList.remove('show'));
+    buildKb();
+    renderWord();
+    renderLives();
+  }
+  function renderLives() {
+    livesEl.innerHTML='';
+    for (let i=0;i<MAX;i++){ const h=document.createElement('span'); h.className='heart'+(i<wrong?' lost':''); h.textContent='❤'; livesEl.appendChild(h); }
+  }
+  function renderWord() {
+    wordEl.innerHTML='';
+    for (const ch of answer) {
+      const s=document.createElement('div'); s.className='slot';
+      if (guessed.has(ch)) { s.textContent=ch; s.classList.add('filled'); }
+      else if (over) { s.textContent=ch; s.classList.add('miss'); }
+      wordEl.appendChild(s);
+    }
   }
 
-  ctx.restore();
-}
-
-function drawWord() {
-  const startX = 400;
-  const y = 240;
-  const letterGap = 50;
-  const totalW = palabra.length * letterGap;
-  const ox = startX + (500 - totalW) / 2;
-
-  for (let i = 0; i < palabra.length; i++) {
-    const x = ox + i * letterGap;
-    if (revealed[i]) {
-      ctx.fillStyle = revealed[i] ? '#4ade80' : '#fff';
-      ctx.font = "bold 36px 'Segoe UI', monospace";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillText(palabra[i], x + letterGap / 2, y);
+  function guess(ch) {
+    if (over || guessed.has(ch)) return;
+    guessed.add(ch);
+    const k = keyEl(ch);
+    if (answer.includes(ch)) {
+      if (k) k.classList.add('good'); sfxGood(); renderWord();
+      if ([...answer].every(c=>guessed.has(c))) finish(true);
     } else {
-      // Letter line
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.fillRect(x + 6, y + 4, letterGap - 12, 3);
+      if (k) k.classList.add('bad');
+      wrong++; sfxBad(); renderLives();
+      const part = document.getElementById('p'+(wrong-1)); if (part) part.classList.add('show');
+      if (wrong>=MAX) finish(false);
     }
   }
-}
 
-function drawKeyboard() {
-  const ky = 340;
-  const keyW = 40, keyH = 36, gap = 4;
-
-  keyButtons = [];
-
-  for (let row = 0; row < KEYBOARD_ROWS.length; row++) {
-    const keys = KEYBOARD_ROWS[row];
-    const totalW = keys.length * (keyW + gap);
-    let ox = (W - totalW) / 2;
-    if (row === 1) ox += keyW / 2;
-    if (row === 2) ox += keyW;
-
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i];
-      const x = ox + i * (keyW + gap);
-      const y = ky + row * (keyH + gap);
-      const used = guessed.includes(k);
-      const correct = used && palabra.includes(k);
-      const wrong = used && !palabra.includes(k);
-
-      ctx.fillStyle = wrong ? 'rgba(255,80,80,0.15)' : correct ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)';
-      roundRect(x, y, keyW, keyH, 6); ctx.fill();
-      ctx.strokeStyle = wrong ? 'rgba(255,80,80,0.3)' : correct ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 1;
-      roundRect(x, y, keyW, keyH, 6); ctx.stroke();
-
-      ctx.fillStyle = wrong ? 'rgba(255,80,80,0.4)' : correct ? '#4ade80' : 'rgba(255,255,255,0.7)';
-      ctx.font = "bold 16px 'Segoe UI', sans-serif";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(k, x + keyW / 2, y + keyH / 2);
-
-      keyButtons.push({ x, y, w: keyW, h: keyH, key: k });
+  function finish(win) {
+    over = true;
+    renderWord();
+    if (win) { msgEl.textContent='🎉 ¡Adivinaste!'; msgEl.className='win'; sfxWin();
+      const w = (parseInt(localStorage.getItem('ahorcadoWins')||'0',10)||0) + 1;
+      localStorage.setItem('ahorcadoWins', String(w));
     }
+    else { msgEl.textContent='Perdiste — era '+answer; msgEl.className='lose'; sfxLose(); }
+    againBtn.style.display='block';
   }
-}
 
-function drawWrongLetters() {
-  const wrong = guessed.filter(k => !palabra.includes(k));
-  if (wrong.length === 0) return;
-  ctx.fillStyle = 'rgba(255,80,80,0.4)';
-  ctx.font = "14px 'Segoe UI', sans-serif";
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('✘ ' + wrong.join(' '), 400, 300);
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0a0a14';
-  ctx.fillRect(0, 0, W, H);
-
-  // Category hint
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.font = "12px 'Segoe UI', sans-serif";
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText(`palabra #${wordCount} · ${palabra.length} letras`, 30, 20);
-
-  drawHangman();
-  drawWord();
-  drawWrongLetters();
-  drawKeyboard();
-
-  // Error indicator
-  ctx.fillStyle = errors >= maxErrors ? '#ff5d5d' : '#fbbf24';
-  ctx.font = "bold 13px 'Segoe UI', sans-serif";
-  ctx.textAlign = 'center';
-  ctx.fillText(`errores: ${'✘'.repeat(errors)}${'○'.repeat(maxErrors - errors)}`, 200, 465);
-}
-
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath(); ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-canvas.addEventListener('click', e => {
-  if (gameOver) return;
-  const rect = canvas.getBoundingClientRect();
-  const sx = W / rect.width, sy = H / rect.height;
-  const mx = (e.clientX - rect.left) * sx;
-  const my = (e.clientY - rect.top) * sy;
-  for (const btn of keyButtons) {
-    if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
-      guessLetter(btn.key);
-      return;
-    }
-  }
-});
-
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (gameOver) return;
-  const t = e.changedTouches[0];
-  const rect = canvas.getBoundingClientRect();
-  const sx = W / rect.width, sy = H / rect.height;
-  const mx = (t.clientX - rect.left) * sx;
-  const my = (t.clientY - rect.top) * sy;
-  for (const btn of keyButtons) {
-    if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
-      guessLetter(btn.key);
-      return;
-    }
-  }
-}, { passive: false });
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { window.location.href = 'index.html'; }
-  if (e.key === 'r' || e.key === 'R') { init(); }
-  if (gameOver) return;
-  const key = e.key.toUpperCase();
-  if (/^[A-ZÑ]$/.test(key)) guessLetter(key);
-});
-
-document.getElementById('againBtn').addEventListener('click', () => { initAudio(); init(); });
-document.addEventListener('click', () => initAudio(), { once: true });
-
-init();
-(function loop() { draw(); requestAnimationFrame(loop); })();
+  document.addEventListener('keydown', e=>{
+    initAudio();
+    if (over && e.key==='Enter') { newGame(); return; }
+    let k=e.key.toUpperCase();
+    if (k==='Ñ' || /^[A-Z]$/.test(k)) guess(k);
+  });
+  againBtn.addEventListener('click', ()=>{ initAudio(); newGame(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('ahorcadoSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('ahorcadoSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  newGame();
 </script>
 </body>
 </html>

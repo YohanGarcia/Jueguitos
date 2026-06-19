@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>💣 Buscaminas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #07070f;
+    --bg2: #0d0d1a;
+    --line: rgba(255,255,255,0.09);
+    --line-hi: rgba(255,255,255,0.18);
+    --txt: #f4f4fb;
+    --mut: #8a8aa3;
+    --mut2: #5b5b72;
+    --gold: #ffcb52;
+    --cell: #1b1b2e;
+    --cell-hi: #24243c;
+    --open: #11111e;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background:
+      radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%),
+      var(--bg);
+    color: var(--txt);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  ::selection { background: var(--gold); color: #07070f; }
+
+  #menuLink {
+    position: absolute; top: 14px; left: 14px; z-index: 6;
+    padding: 8px 16px; border-radius: 999px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none;
+    transition: background .15s, border-color .15s;
+  }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn {
+    position: absolute; top: 14px; right: 14px; z-index: 6;
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+
+  #app {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    width: min(94vw, 420px); padding: 16px;
+  }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+
+  /* ---- hud ---- */
+  .hud {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px;
+  }
+  .hud .item { display: flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; font-size: 17px; font-weight: 700; }
+  .hud .item svg { width: 17px; height: 17px; fill: none; stroke: var(--gold); stroke-width: 1.8; }
+  .hud .item.time svg { stroke: var(--mut); }
+  #face {
+    width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-hi);
+    background: var(--cell); font-size: 19px; cursor: pointer; transition: background .12s, transform .08s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #face:active { transform: scale(0.92); }
+
+  /* ---- board ---- */
+  #board {
+    display: grid; gap: 3px; width: 100%; aspect-ratio: 1;
+    touch-action: manipulation;
+  }
+  .c {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--cell); border-radius: 5px; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-weight: 700;
+    font-size: clamp(13px, 3.6vw, 18px);
+    transition: background .1s;
+  }
+  .c:hover:not(.open) { background: var(--cell-hi); }
+  .c.open { background: var(--open); cursor: default; }
+  .c.flag { color: var(--gold); }
+  .c.mine { background: #ff5e6c; }
+  .c.boom { background: #ff3b50; }
+  .c.wrong { background: #3a1f28; }
+  .c.n1 { color: #4d8dff; } .c.n2 { color: #2ee6a0; } .c.n3 { color: #ff5e6c; }
+  .c.n4 { color: #b07cff; } .c.n5 { color: #ffcb52; } .c.n6 { color: #2ed5e6; }
+  .c.n7 { color: #ff9f4d; } .c.n8 { color: #c8c8d8; }
+
+  /* ---- flag toggle ---- */
+  .mode {
+    display: flex; gap: 8px; background: var(--bg2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px;
+  }
+  .mode button {
+    flex: 1; padding: 11px 20px; border: none; border-radius: 999px; background: transparent;
+    color: var(--mut); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px; transition: background .15s, color .15s;
+  }
+  .mode button.active { background: var(--cell-hi); color: var(--txt); }
+  .mode button.active.flagmode { background: var(--gold); color: #07070f; }
+
+  /* ---- overlay ---- */
+  #overlay {
+    position: absolute; inset: 0; z-index: 10; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: rgba(7,7,15,0.86); backdrop-filter: blur(5px); text-align: center; padding: 24px;
+  }
+  #overlay h2 { font-size: 38px; font-weight: 700; letter-spacing: -0.02em; }
+  #overlay h2.win { color: var(--gold); }
+  #overlay h2.lose { color: #ff5e6c; }
+  #overlay .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); }
+  #overlay .info b { color: var(--gold); }
+  #overlay button {
+    margin-top: 4px; padding: 13px 30px; border: none; border-radius: 999px;
+    background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: transform .12s;
+  }
+  #overlay button:active { transform: scale(0.96); }
+
+  /* ---- help ---- */
+  #help {
+    position: absolute; inset: 0; z-index: 12; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(7,7,15,0.9); backdrop-filter: blur(6px);
+  }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+  #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; }
+  #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; }
+  #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Buscamin<span class="o">a</span>s</h1>
+    <div class="sub">9 × 9 · 10 minas</div>
+  </header>
+
+  <div class="hud">
+    <div class="item"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="9" y1="2" x2="15" y2="2"/></svg><span id="mineCount">10</span></div>
+    <button id="face">🙂</button>
+    <div class="item time"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg><span id="timer">0</span></div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="mode">
+    <button id="modeDig" class="active" data-mode="dig">⛏️ cavar</button>
+    <button id="modeFlag" data-mode="flag">🚩 bandera</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <h2 id="ovTitle">¡GANASTE!</h2>
+  <div class="info" id="ovInfo">tiempo: 0s</div>
+  <button id="againBtn">jugar de nuevo</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Buscamin<span class="o">a</span>s</h2>
+    <ol>
+      <li><b>Despejá todas las casillas</b> que no tengan mina.</li>
+      <li>Un número indica <b>cuántas minas hay alrededor</b> de esa casilla. Usalo para deducir dónde están.</li>
+      <li>Cambiá a <b>🚩 bandera</b> para marcar las minas que descubriste.</li>
+      <li>Si cavás una mina, perdés. ¡La primera siempre es segura!</li>
+    </ol>
+    <button id="helpClose">¡entendido!</button>
+  </div>
+</div>
+
+<script>
+  const SIZE = 9, MINES = 10;
+  const boardEl = document.getElementById('board');
+  const mineCountEl = document.getElementById('mineCount');
+  const timerEl = document.getElementById('timer');
+  const faceEl = document.getElementById('face');
+  const overlay = document.getElementById('overlay');
+
+  let grid, revealed, flagged, started, dead, won, flags, openedCount;
+  let timer = 0, tInt = null, flagMode = false;
+
+  let best = parseInt(localStorage.getItem('minasBest') || '0', 10) || 0;
+
+  boardEl.style.gridTemplateColumns = `repeat(${SIZE}, 1fr)`;
+
+  // ---- audio ----
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); }
+  function tone(f, d, t = 'sine', v = 0.05) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    const t0 = actx.currentTime;
+    g.gain.setValueAtTime(v, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + d);
+    o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0 + d);
+  }
+  const sfxDig = () => tone(420, 0.05, 'triangle', 0.03);
+  const sfxFlag = () => tone(660, 0.07, 'square', 0.04);
+  const sfxBoom = () => { [180,120,80].forEach((f,i)=>setTimeout(()=>tone(f,0.25,'sawtooth',0.07), i*70)); };
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06), i*110));
+
+  function idx(r, c) { return r * SIZE + c; }
+  function inBounds(r, c) { return r >= 0 && r < SIZE && c >= 0 && c < SIZE; }
+  function neighbors(r, c) {
+    const out = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      if (inBounds(r + dr, c + dc)) out.push([r + dr, c + dc]);
+    }
+    return out;
+  }
+
+  function newGame() {
+    grid = Array(SIZE * SIZE).fill(0); // -1 mine, else count
+    revealed = Array(SIZE * SIZE).fill(false);
+    flagged = Array(SIZE * SIZE).fill(false);
+    started = false; dead = false; won = false; flags = 0; openedCount = 0;
+    timer = 0; clearInterval(tInt); tInt = null;
+    timerEl.textContent = '0';
+    mineCountEl.textContent = MINES;
+    faceEl.textContent = '🙂';
+    overlay.style.display = 'none';
+    render();
+  }
+
+  function placeMines(safeR, safeC) {
+    const forbidden = new Set([idx(safeR, safeC), ...neighbors(safeR, safeC).map(([r, c]) => idx(r, c))]);
+    let placed = 0;
+    while (placed < MINES) {
+      const i = Math.floor(Math.random() * SIZE * SIZE);
+      if (grid[i] === -1 || forbidden.has(i)) continue;
+      grid[i] = -1; placed++;
+    }
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      if (grid[idx(r, c)] === -1) continue;
+      grid[idx(r, c)] = neighbors(r, c).filter(([nr, nc]) => grid[idx(nr, nc)] === -1).length;
+    }
+  }
+
+  function startTimer() {
+    tInt = setInterval(() => { timer++; timerEl.textContent = timer; }, 1000);
+  }
+
+  function reveal(r, c) {
+    const i = idx(r, c);
+    if (revealed[i] || flagged[i]) return;
+    revealed[i] = true; openedCount++;
+    if (grid[i] === 0) {
+      for (const [nr, nc] of neighbors(r, c)) reveal(nr, nc);
+    }
+  }
+
+  function dig(r, c) {
+    const i = idx(r, c);
+    if (revealed[i] || flagged[i] || dead || won) return;
+    if (!started) { started = true; placeMines(r, c); startTimer(); }
+    if (grid[i] === -1) {
+      dead = true; revealed[i] = true;
+      clearInterval(tInt);
+      faceEl.textContent = '💥'; sfxBoom();
+      render(i);
+      endGame(false);
+      return;
+    }
+    reveal(r, c); sfxDig();
+    checkWin();
+    render();
+  }
+
+  function toggleFlag(r, c) {
+    const i = idx(r, c);
+    if (revealed[i] || dead || won) return;
+    if (!started) { started = true; placeMines(r, c); startTimer(); }
+    flagged[i] = !flagged[i];
+    flags += flagged[i] ? 1 : -1;
+    mineCountEl.textContent = MINES - flags;
+    sfxFlag();
+    render();
+  }
+
+  function checkWin() {
+    if (openedCount === SIZE * SIZE - MINES) {
+      won = true; clearInterval(tInt);
+      faceEl.textContent = '😎'; sfxWin();
+      // auto-flag remaining
+      for (let i = 0; i < grid.length; i++) if (grid[i] === -1) flagged[i] = true;
+      mineCountEl.textContent = '0';
+      render();
+      endGame(true);
+    }
+  }
+
+  function endGame(win) {
+    setTimeout(() => {
+      const h = document.getElementById('ovTitle');
+      if (win) {
+        h.textContent = '¡GANASTE!'; h.className = 'win';
+        let msg = `tiempo: <b>${timer}s</b>`;
+        if (best === 0 || timer < best) { best = timer; localStorage.setItem('minasBest', String(best)); msg += ' · ¡nuevo récord!'; }
+        else msg += ` · récord: ${best}s`;
+        document.getElementById('ovInfo').innerHTML = msg;
+      } else {
+        h.textContent = 'BOOM'; h.className = 'lose';
+        document.getElementById('ovInfo').innerHTML = 'pisaste una mina';
+      }
+      overlay.style.display = 'flex';
+    }, win ? 700 : 900);
+  }
+
+  function render(boomIdx = -1) {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const i = idx(r, c);
+      const cell = document.createElement('div');
+      cell.className = 'c';
+      if (revealed[i]) {
+        cell.classList.add('open');
+        if (grid[i] === -1) {
+          cell.classList.add(i === boomIdx ? 'boom' : 'mine');
+          cell.textContent = '💣';
+        } else if (grid[i] > 0) {
+          cell.classList.add('n' + grid[i]);
+          cell.textContent = grid[i];
+        }
+      } else if (flagged[i]) {
+        cell.classList.add('flag');
+        cell.textContent = '🚩';
+        if (dead && grid[i] !== -1) { cell.classList.add('wrong'); cell.textContent = '✕'; }
+      } else if (dead && grid[i] === -1) {
+        cell.classList.add('open', 'mine'); cell.textContent = '💣';
+      }
+      cell.addEventListener('click', () => {
+        initAudio();
+        if (flagMode) toggleFlag(r, c); else dig(r, c);
+      });
+      cell.addEventListener('contextmenu', e => { e.preventDefault(); initAudio(); toggleFlag(r, c); });
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // ---- mode toggle ----
+  const modeDig = document.getElementById('modeDig');
+  const modeFlag = document.getElementById('modeFlag');
+  function setMode(flag) {
+    flagMode = flag;
+    modeDig.classList.toggle('active', !flag);
+    modeFlag.classList.toggle('active', flag);
+    modeFlag.classList.toggle('flagmode', flag);
+  }
+  modeDig.addEventListener('click', () => setMode(false));
+  modeFlag.addEventListener('click', () => setMode(true));
+
+  faceEl.addEventListener('click', () => { initAudio(); newGame(); });
+  document.getElementById('againBtn').addEventListener('click', () => { initAudio(); newGame(); });
+
+  // help
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', () => helpEl.style.display = 'flex');
+  document.getElementById('helpClose').addEventListener('click', () => { helpEl.style.display = 'none'; localStorage.setItem('minasSeenHelp', '1'); });
+  helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.style.display = 'none'; });
+  if (!localStorage.getItem('minasSeenHelp')) helpEl.style.display = 'flex';
+
+  document.addEventListener('gesturestart', e => e.preventDefault());
+
+  newGame();
+</script>
+</body>
+</html>

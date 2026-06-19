@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔴 Conecta 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #07070f;
+    --bg2: #0d0d1a;
+    --line: rgba(255,255,255,0.09);
+    --line-hi: rgba(255,255,255,0.18);
+    --txt: #f4f4fb;
+    --mut: #8a8aa3;
+    --mut2: #5b5b72;
+    --gold: #ffcb52;
+    --red: #ff5e6c;
+    --blue: #4d8dff;
+    --board: #161628;
+    --slot: #0c0c16;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background:
+      radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%),
+      var(--bg);
+    color: var(--txt);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  ::selection { background: var(--gold); color: #07070f; }
+
+  #menuLink {
+    position: absolute; top: 14px; left: 14px; z-index: 6;
+    padding: 8px 16px; border-radius: 999px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none;
+    transition: background .15s, border-color .15s;
+  }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn {
+    position: absolute; top: 14px; right: 14px; z-index: 6;
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+
+  #app { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(94vw, 440px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+
+  /* ---- scoreboard ---- */
+  .score { display: flex; align-items: stretch; gap: 10px; width: 100%; }
+  .who {
+    flex: 1; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px; transition: border-color .2s, background .2s;
+  }
+  .who.turn { border-color: var(--line-hi); background: #181830; }
+  .who .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+  .who.you .dot { background: var(--red); box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3); }
+  .who.cpu .dot { background: var(--blue); box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3); }
+  .who .lbl { font-size: 12px; color: var(--mut); text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.3; }
+  .who .num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; }
+
+  /* ---- board ---- */
+  #boardWrap { width: 100%; background: var(--board); border-radius: 16px; padding: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+  #cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .col { display: flex; flex-direction: column; gap: 6px; cursor: pointer; border-radius: 8px; transition: background .12s; padding: 2px; }
+  .col:hover { background: rgba(255,255,255,0.04); }
+  .cell { aspect-ratio: 1; border-radius: 50%; background: var(--slot); box-shadow: inset 0 3px 7px rgba(0,0,0,0.6); position: relative; }
+  .disc { position: absolute; inset: 0; border-radius: 50%; transform: translateY(-420%); }
+  .disc.r { background: radial-gradient(circle at 38% 32%, #ff8a93, var(--red)); }
+  .disc.b { background: radial-gradient(circle at 38% 32%, #88b4ff, var(--blue)); }
+  .disc.drop { animation: drop .42s cubic-bezier(.4,.7,.5,1.1) forwards; }
+  @keyframes drop { to { transform: translateY(0); } }
+  .disc.win { animation: pulse 0.7s ease infinite; }
+  @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 rgba(255,203,82,0);} 50%{ box-shadow: 0 0 18px 3px var(--gold);} }
+  #cols.lock { pointer-events: none; }
+
+  #status { min-height: 22px; font-size: 15px; color: var(--mut); font-weight: 500; text-align: center; }
+  #status b.r { color: var(--red); } #status b.b { color: var(--blue); }
+  #resetBtn {
+    padding: 11px 28px; border: 1px solid var(--line-hi); border-radius: 999px;
+    background: var(--bg2); color: var(--txt); font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  #resetBtn:hover { background: #1a1a30; border-color: var(--gold); color: var(--gold); }
+
+  /* ---- help ---- */
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+  #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; }
+  #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; }
+  #help li b { color: var(--txt); font-weight: 600; }
+  #help li .r { color: var(--red); } #help li .b { color: var(--blue); }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Conect<span class="o">a</span> 4</h1>
+    <div class="sub">vos vs la máquina</div>
+  </header>
+
+  <div class="score">
+    <div class="who you turn" id="youCard">
+      <div class="dot"></div>
+      <div><div class="lbl">vos</div><div class="num" id="youScore">0</div></div>
+    </div>
+    <div class="who cpu" id="cpuCard">
+      <div class="dot"></div>
+      <div><div class="lbl">máquina</div><div class="num" id="cpuScore">0</div></div>
+    </div>
+  </div>
+
+  <div id="boardWrap"><div id="cols"></div></div>
+
+  <div id="status">¡Empezás vos! Tocá una columna.</div>
+  <button id="resetBtn">reiniciar tablero</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Conect<span class="o">a</span> 4</h2>
+    <ol>
+      <li>Tocá una <b>columna</b> para soltar tu ficha <span class="r">roja</span>; cae hasta abajo.</li>
+      <li>Por turnos con la <span class="b">máquina</span>: el primero en alinear <b>4 en fila</b> gana.</li>
+      <li>Sirve en <b>horizontal, vertical o diagonal</b>.</li>
+      <li>¡Bloqueá a la máquina antes de que te gane!</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const ROWS = 6, COLS = 7;
+  const HUMAN = 1, CPU = 2;
+  const colsEl = document.getElementById('cols');
+  const statusEl = document.getElementById('status');
+  const youCard = document.getElementById('youCard');
+  const cpuCard = document.getElementById('cpuCard');
+
+  let board, turn, over, busy;
+  let scores = { you: parseInt(localStorage.getItem('conecta4You')||'0',10)||0, cpu: parseInt(localStorage.getItem('conecta4Cpu')||'0',10)||0 };
+  document.getElementById('youScore').textContent = scores.you;
+  document.getElementById('cpuScore').textContent = scores.cpu;
+
+  // ---- audio ----
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); }
+  function tone(f, d, t = 'sine', v = 0.05) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = t; o.frequency.value = f;
+    const t0 = actx.currentTime;
+    g.gain.setValueAtTime(v, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + d);
+    o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0 + d);
+  }
+  const sfxDrop = () => tone(280, 0.09, 'triangle', 0.04);
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06), i*100));
+  const sfxLose = () => [392,294,196].forEach((f,i)=>setTimeout(()=>tone(f,0.25,'sawtooth',0.05), i*130));
+
+  function buildBoard() {
+    colsEl.innerHTML = '';
+    for (let c = 0; c < COLS; c++) {
+      const col = document.createElement('div');
+      col.className = 'col'; col.dataset.c = c;
+      for (let r = 0; r < ROWS; r++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = '<div class="disc" data-r="'+r+'" data-c="'+c+'"></div>';
+        col.appendChild(cell);
+      }
+      col.addEventListener('click', () => { initAudio(); humanMove(c); });
+      colsEl.appendChild(col);
+    }
+  }
+  function discEl(r, c) { return colsEl.querySelector(`.disc[data-r="${r}"][data-c="${c}"]`); }
+
+  function reset() {
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    turn = HUMAN; over = false; busy = false;
+    buildBoard();
+    setTurnUI();
+    statusEl.innerHTML = '¡Empezás vos! Tocá una columna.';
+  }
+
+  function setTurnUI() {
+    youCard.classList.toggle('turn', turn === HUMAN && !over);
+    cpuCard.classList.toggle('turn', turn === CPU && !over);
+  }
+
+  function dropRow(b, c) {
+    for (let r = ROWS - 1; r >= 0; r--) if (b[r][c] === 0) return r;
+    return -1;
+  }
+
+  function place(c, player) {
+    const r = dropRow(board, c);
+    if (r < 0) return -1;
+    board[r][c] = player;
+    const d = discEl(r, c);
+    d.classList.add(player === HUMAN ? 'r' : 'b', 'drop');
+    sfxDrop();
+    return r;
+  }
+
+  function humanMove(c) {
+    if (over || busy || turn !== HUMAN) return;
+    if (dropRow(board, c) < 0) return;
+    const r = place(c, HUMAN);
+    afterMove(r, c, HUMAN);
+  }
+
+  function afterMove(r, c, player) {
+    const line = winningLine(board, r, c, player);
+    if (line) return finish(player, line);
+    if (board[0].every(v => v !== 0)) return finish(0, null); // draw
+    turn = player === HUMAN ? CPU : HUMAN;
+    setTurnUI();
+    if (turn === CPU) {
+      busy = true;
+      colsEl.classList.add('lock');
+      statusEl.innerHTML = 'la <b class="b">máquina</b> piensa…';
+      setTimeout(cpuMove, 480);
+    } else {
+      statusEl.innerHTML = 'tu turno';
+    }
+  }
+
+  function cpuMove() {
+    const c = bestMove();
+    const r = place(c, CPU);
+    busy = false;
+    colsEl.classList.remove('lock');
+    afterMove(r, c, CPU);
+  }
+
+  // ---- AI ----
+  function validCols(b) { const out = []; for (let c=0;c<COLS;c++) if (b[0][c]===0) out.push(c); return out; }
+  function cloneDrop(b, c, p) { const nb = b.map(row=>row.slice()); const r = dropRow(nb,c); if(r<0) return null; nb[r][c]=p; return {nb, r}; }
+  function wins(b, r, c, p) { return !!winningLine(b, r, c, p); }
+
+  function bestMove() {
+    const valid = validCols(board);
+    // 1. win now
+    for (const c of valid) { const d = cloneDrop(board, c, CPU); if (d && wins(d.nb, d.r, c, CPU)) return c; }
+    // 2. block human win
+    for (const c of valid) { const d = cloneDrop(board, c, HUMAN); if (d && wins(d.nb, d.r, c, HUMAN)) return c; }
+    // 3. avoid giving human a win on top; score by minimax-lite (depth 4)
+    let bestScore = -Infinity, bestCols = [valid[Math.floor(valid.length/2)]];
+    for (const c of valid) {
+      const d = cloneDrop(board, c, CPU);
+      const s = minimax(d.nb, 3, -Infinity, Infinity, false, d.r, c) + centerBias(c);
+      if (s > bestScore) { bestScore = s; bestCols = [c]; }
+      else if (s === bestScore) bestCols.push(c);
+    }
+    return bestCols[Math.floor(Math.random() * bestCols.length)];
+  }
+  function centerBias(c) { return (3 - Math.abs(3 - c)) * 0.5; }
+
+  function minimax(b, depth, alpha, beta, maximizing, lastR, lastC) {
+    const mover = maximizing ? HUMAN : CPU; // last move was by opposite
+    if (wins(b, lastR, lastC, maximizing ? CPU : HUMAN)) return maximizing ? -1000 - depth : 1000 + depth;
+    const valid = validCols(b);
+    if (depth === 0 || valid.length === 0) return heuristic(b);
+    if (maximizing) {
+      let v = -Infinity;
+      for (const c of valid) { const d = cloneDrop(b, c, CPU); const s = minimax(d.nb, depth-1, alpha, beta, false, d.r, c); v = Math.max(v, s); alpha = Math.max(alpha, v); if (beta <= alpha) break; }
+      return v;
+    } else {
+      let v = Infinity;
+      for (const c of valid) { const d = cloneDrop(b, c, HUMAN); const s = minimax(d.nb, depth-1, alpha, beta, true, d.r, c); v = Math.min(v, s); beta = Math.min(beta, v); if (beta <= alpha) break; }
+      return v;
+    }
+  }
+  function heuristic(b) {
+    let score = 0;
+    // count windows of 4
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) for (const [dr,dc] of dirs) {
+      const cells = [];
+      for (let k=0;k<4;k++){ const rr=r+dr*k, cc=c+dc*k; if(rr<0||rr>=ROWS||cc<0||cc>=COLS){cells.length=0;break;} cells.push(b[rr][cc]); }
+      if (cells.length<4) continue;
+      const cpu = cells.filter(v=>v===CPU).length, hum = cells.filter(v=>v===HUMAN).length;
+      if (cpu>0 && hum>0) continue;
+      if (cpu===3) score += 6; else if (cpu===2) score += 2;
+      if (hum===3) score -= 8; else if (hum===2) score -= 2;
+    }
+    return score;
+  }
+
+  // ---- win detection, returns winning cells or null ----
+  function winningLine(b, r, c, p) {
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for (const [dr,dc] of dirs) {
+      const line = [[r,c]];
+      for (let s=1;s<4;s++){ const rr=r+dr*s,cc=c+dc*s; if(rr<0||rr>=ROWS||cc<0||cc>=COLS||b[rr][cc]!==p)break; line.push([rr,cc]); }
+      for (let s=1;s<4;s++){ const rr=r-dr*s,cc=c-dc*s; if(rr<0||rr>=ROWS||cc<0||cc>=COLS||b[rr][cc]!==p)break; line.unshift([rr,cc]); }
+      if (line.length>=4) return line.slice(0,4);
+    }
+    return null;
+  }
+
+  function finish(winner, line) {
+    over = true;
+    setTurnUI();
+    if (line) line.forEach(([r,c]) => discEl(r,c).classList.add('win'));
+    if (winner === HUMAN) {
+      scores.you++; localStorage.setItem('conecta4You', String(scores.you));
+      document.getElementById('youScore').textContent = scores.you;
+      statusEl.innerHTML = '🎉 ¡Ganaste vos!'; sfxWin();
+    } else if (winner === CPU) {
+      scores.cpu++; localStorage.setItem('conecta4Cpu', String(scores.cpu));
+      document.getElementById('cpuScore').textContent = scores.cpu;
+      statusEl.innerHTML = 'Ganó la <b class="b">máquina</b> 🤖'; sfxLose();
+    } else {
+      statusEl.innerHTML = 'Empate 🤝';
+    }
+    setTimeout(reset, 2600);
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => { initAudio(); reset(); });
+
+  // help
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', () => helpEl.style.display = 'flex');
+  document.getElementById('helpClose').addEventListener('click', () => { helpEl.style.display = 'none'; localStorage.setItem('conecta4SeenHelp', '1'); });
+  helpEl.addEventListener('click', e => { if (e.target === helpEl) helpEl.style.display = 'none'; });
+  if (!localStorage.getItem('conecta4SeenHelp')) helpEl.style.display = 'flex';
+
+  document.addEventListener('gesturestart', e => e.preventDefault());
+
+  reset();
+</script>
+</body>
+</html>

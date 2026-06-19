@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>➗ Mate rápido</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; --red:#ff5e6c; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 20px; width: min(94vw, 420px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .hud { width: 100%; display: flex; justify-content: space-around; }
+  .stat { text-align: center; }
+  .stat .v { font-family: 'Space Mono', monospace; font-size: clamp(24px, 6.5vw, 30px); font-weight: 700; line-height: 1; }
+  .stat .v.gold { color: var(--gold); } .stat .v.green { color: var(--green); } .stat .v.time.low { color: var(--red); }
+  .stat .k { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--mut2); text-transform: uppercase; margin-top: 6px; }
+  .timebar { width: 100%; height: 6px; border-radius: 3px; background: var(--bg2); overflow: hidden; }
+  .timebar .fill { height: 100%; width: 100%; background: var(--green); transition: width .1s linear, background .2s; }
+  .eq { font-family: 'Space Mono', monospace; font-size: clamp(40px, 13vw, 62px); font-weight: 700; min-height: 80px; display: flex; align-items: center; }
+  .opts { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .opt { padding: 22px; border: 2px solid var(--line-hi); border-radius: 14px; background: var(--bg2); font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; cursor: pointer; transition: background .1s, transform .08s, border-color .12s; }
+  .opt:active { transform: scale(0.96); }
+  .opt.right { border-color: var(--green); background: rgba(46,230,160,0.16); }
+  .opt.wrong { border-color: var(--red); background: rgba(255,94,108,0.16); }
+  .opts.lock { pointer-events: none; }
+  .combo { min-height: 22px; font-family: 'Space Mono', monospace; font-size: 14px; color: var(--gold); font-weight: 700; }
+  #startLayer, #overlay { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(7,7,15,0.86); backdrop-filter: blur(5px); text-align: center; padding: 24px; }
+  #overlay { display: none; }
+  #startLayer h2, #overlay h2 { font-size: 44px; font-weight: 700; color: var(--gold); font-family: 'Space Mono', monospace; }
+  #startLayer .t, #overlay .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); } #overlay .info b { color: var(--gold); }
+  #startLayer button, #overlay button { margin-top: 4px; padding: 14px 36px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Mate ráp<span class="o">i</span>do</h1>
+    <div class="sub">resolvé antes de que se acabe</div>
+  </header>
+  <div class="hud">
+    <div class="stat"><div class="v gold" id="score">0</div><div class="k">puntos</div></div>
+    <div class="stat"><div class="v green" id="streak">0</div><div class="k">seguidas</div></div>
+    <div class="stat"><div class="v" id="best">0</div><div class="k">récord</div></div>
+  </div>
+  <div class="timebar"><div class="fill" id="timeFill"></div></div>
+  <div class="eq" id="eq">3 + 4</div>
+  <div class="opts" id="opts"></div>
+  <div class="combo" id="combo"></div>
+</div>
+
+<div id="startLayer">
+  <h2>Mate rápido</h2>
+  <div class="t">cada cuenta tiene su tiempo · responde rápido para sumar combo</div>
+  <button id="startBtn">empezar</button>
+</div>
+<div id="overlay">
+  <h2 id="ovScore">0</h2>
+  <div class="info" id="ovInfo">puntos</div>
+  <button id="againBtn">jugar de nuevo</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Mate ráp<span class="o">i</span>do</h2>
+    <ol>
+      <li>Resolvé la <b>operación</b> tocando la respuesta correcta entre las 4 opciones.</li>
+      <li>Cada cuenta tiene un <b>tiempo límite</b> (la barra verde). Si se acaba, perdés.</li>
+      <li>Respuestas seguidas suben tu <b>combo</b> y valen más puntos. ¡Un error termina el juego!</li>
+    </ol>
+    <button id="helpClose">¡a calcular!</button>
+  </div>
+</div>
+
+<script>
+  const eqEl = document.getElementById('eq');
+  const optsEl = document.getElementById('opts');
+  const scoreEl = document.getElementById('score');
+  const streakEl = document.getElementById('streak');
+  const bestEl = document.getElementById('best');
+  const comboEl = document.getElementById('combo');
+  const timeFill = document.getElementById('timeFill');
+  const startLayer = document.getElementById('startLayer');
+  const overlay = document.getElementById('overlay');
+  let score, streak, playing, answer, raf, deadline, perQ;
+  let best = parseInt(localStorage.getItem('materapidoBest')||'0',10)||0;
+  bestEl.textContent = best;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxGood=()=>tone(620+Math.min(streak,10)*30,0.07,'square',0.04);
+  const sfxBad=()=>tone(150,0.2,'sawtooth',0.06);
+  const sfxEnd=()=>[392,294,196].forEach((f,i)=>setTimeout(()=>tone(f,0.22,'sawtooth',0.05),i*130));
+
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+  function makeQ() {
+    const lvl = Math.min(Math.floor(score/5), 6);
+    const ops = lvl<1 ? ['+','-'] : lvl<3 ? ['+','-','×'] : ['+','-','×','÷'];
+    const op = ops[Math.floor(Math.random()*ops.length)];
+    let a, b, res, text;
+    const max = 6 + lvl*4;
+    if (op==='+') { a=1+Math.floor(Math.random()*max); b=1+Math.floor(Math.random()*max); res=a+b; }
+    else if (op==='-') { a=1+Math.floor(Math.random()*max); b=1+Math.floor(Math.random()*a); res=a-b; }
+    else if (op==='×') { a=2+Math.floor(Math.random()*(4+lvl)); b=2+Math.floor(Math.random()*(4+lvl)); res=a*b; }
+    else { b=2+Math.floor(Math.random()*8); res=1+Math.floor(Math.random()*8); a=b*res; }
+    text = `${a} ${op} ${b}`;
+    answer = res;
+    eqEl.textContent = text;
+    // options
+    const set = new Set([res]);
+    while (set.size<4) { let d = res + (Math.floor(Math.random()*9)-4); if (d!==res && d>=0) set.add(d); else set.add(res+set.size+1); }
+    const opts = shuffle([...set]);
+    optsEl.innerHTML=''; optsEl.classList.remove('lock');
+    opts.forEach(v=>{ const b2=document.createElement('button'); b2.className='opt'; b2.textContent=v; b2.addEventListener('click',()=>pick(v,b2)); optsEl.appendChild(b2); });
+    // timer per question shrinks with level
+    perQ = Math.max(2200, 5000 - lvl*350 - score*30);
+    deadline = performance.now() + perQ;
+    cancelAnimationFrame(raf); tickBar();
+  }
+  function tickBar() {
+    if (!playing) return;
+    const left = deadline - performance.now();
+    const pct = Math.max(0, left/perQ*100);
+    timeFill.style.width = pct+'%';
+    timeFill.style.background = pct<30 ? 'var(--red)' : pct<60 ? 'var(--gold)' : 'var(--green)';
+    if (left<=0) return timeout();
+    raf = requestAnimationFrame(tickBar);
+  }
+  function pick(v, btn) {
+    if (!playing) return;
+    if (v===answer) { streak++; const pts=1+Math.floor(streak/3); score+=pts; scoreEl.textContent=score; streakEl.textContent=streak; comboEl.textContent = streak>=3?`combo ×${1+Math.floor(streak/3)}`:''; sfxGood(); btn.classList.add('right'); optsEl.classList.add('lock'); setTimeout(makeQ,140); }
+    else { btn.classList.add('wrong'); sfxBad(); end('respuesta incorrecta'); }
+  }
+  function timeout() { sfxBad(); end('se acabó el tiempo'); }
+
+  function start() {
+    initAudio(); score=0; streak=0; playing=true;
+    scoreEl.textContent='0'; streakEl.textContent='0'; comboEl.textContent='';
+    startLayer.style.display='none'; overlay.style.display='none';
+    makeQ();
+  }
+  function end(reason) {
+    playing=false; cancelAnimationFrame(raf); optsEl.classList.add('lock'); sfxEnd();
+    const record=score>best;
+    if (record){ best=score; localStorage.setItem('materapidoBest',String(best)); bestEl.textContent=best; }
+    document.getElementById('ovScore').textContent=score;
+    document.getElementById('ovInfo').innerHTML = (record?'puntos · ¡nuevo récord! 🎉':`puntos · récord <b>${best}</b>`);
+    setTimeout(()=>overlay.style.display='flex',400);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('againBtn').addEventListener('click', ()=>{ overlay.style.display='none'; start(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('materapidoSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('materapidoSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+</script>
+</body>
+</html>

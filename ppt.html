@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🪨 Piedra Papel Tijera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; --red:#ff5e6c; --blue:#4d8dff; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 20px; width: min(94vw, 420px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(24px, 6.5vw, 32px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .score { display: flex; gap: 10px; width: 100%; }
+  .who { flex: 1; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; }
+  .who .lbl { font-size: 12px; color: var(--mut); text-transform: uppercase; letter-spacing: 0.08em; }
+  .who .num { font-family: 'Space Mono', monospace; font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .who.you .num { color: var(--green); } .who.cpu .num { color: var(--red); }
+  .arena { width: 100%; display: flex; align-items: center; justify-content: space-around; min-height: 120px; }
+  .hand { font-size: clamp(54px, 18vw, 84px); transition: transform .1s; }
+  .hand.you { transform: scaleX(-1); }
+  .hand.shake { animation: shake .4s ease; }
+  @keyframes shake { 0%,100%{transform:translateY(0) scaleX(var(--sx,1))} 25%{transform:translateY(-16px) scaleX(var(--sx,1))} 50%{transform:translateY(0) scaleX(var(--sx,1))} 75%{transform:translateY(-10px) scaleX(var(--sx,1))} }
+  .vs { font-family: 'Space Mono', monospace; font-size: 16px; color: var(--mut2); }
+  #result { min-height: 28px; font-size: 20px; font-weight: 700; text-align: center; }
+  #result.win { color: var(--green); } #result.lose { color: var(--red); } #result.tie { color: var(--gold); }
+  .picks { display: flex; gap: 12px; width: 100%; }
+  .pick { flex: 1; aspect-ratio: 1; background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; font-size: clamp(34px, 11vw, 50px); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .12s, transform .08s, border-color .12s; }
+  .pick:hover { background: #17172a; border-color: var(--gold); } .pick:active { transform: scale(0.94); }
+  .picks.lock { pointer-events: none; opacity: 0.5; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Piedra Papel Tijer<span class="o">a</span></h1>
+    <div class="sub">primero a 5 gana</div>
+  </header>
+  <div class="score">
+    <div class="who you"><div class="lbl">vos</div><div class="num" id="youScore">0</div></div>
+    <div class="who cpu"><div class="lbl">máquina</div><div class="num" id="cpuScore">0</div></div>
+  </div>
+  <div class="arena">
+    <div class="hand you" id="youHand">✊</div>
+    <div class="vs">VS</div>
+    <div class="hand cpu" id="cpuHand">✊</div>
+  </div>
+  <div id="result">elegí tu jugada</div>
+  <div class="picks" id="picks">
+    <button class="pick" data-p="piedra">✊</button>
+    <button class="pick" data-p="papel">✋</button>
+    <button class="pick" data-p="tijera">✌️</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Piedra Papel Tijer<span class="o">a</span></h2>
+    <ol>
+      <li><b>Piedra</b> ✊ vence a tijera. <b>Papel</b> ✋ vence a piedra. <b>Tijera</b> ✌️ vence a papel.</li>
+      <li>Elegí tu jugada; la máquina elige a la vez. Gana la ronda quien le gane al otro.</li>
+      <li>El primero en llegar a <b>5 puntos</b> gana la partida.</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const EMOJI = { piedra:'✊', papel:'✋', tijera:'✌️' };
+  const BEATS = { piedra:'tijera', papel:'piedra', tijera:'papel' };
+  const NAMES = Object.keys(EMOJI);
+  const youHand = document.getElementById('youHand'), cpuHand = document.getElementById('cpuHand');
+  const resultEl = document.getElementById('result');
+  const picksEl = document.getElementById('picks');
+  const youScoreEl = document.getElementById('youScore'), cpuScoreEl = document.getElementById('cpuScore');
+  let you=0, cpu=0, over=false;
+  let wins = parseInt(localStorage.getItem('pptWins')||'0',10)||0;
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxWin=()=>{tone(660,0.08,'square',0.05);setTimeout(()=>tone(880,0.1,'square',0.05),80);};
+  const sfxLose=()=>tone(160,0.18,'sawtooth',0.05);
+  const sfxTie=()=>tone(330,0.1,'triangle',0.04);
+  const sfxGame=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+
+  function play(pick) {
+    if (over) return;
+    cpuHand.style.setProperty('--sx','1'); youHand.style.setProperty('--sx','-1');
+    youHand.textContent='✊'; cpuHand.textContent='✊';
+    youHand.classList.add('shake'); cpuHand.classList.add('shake');
+    picksEl.classList.add('lock');
+    resultEl.textContent='…'; resultEl.className='';
+    setTimeout(()=>{
+      youHand.classList.remove('shake'); cpuHand.classList.remove('shake');
+      const cpuPick = NAMES[Math.floor(Math.random()*3)];
+      youHand.textContent = EMOJI[pick]; cpuHand.textContent = EMOJI[cpuPick];
+      if (pick===cpuPick) { resultEl.textContent='Empate'; resultEl.className='tie'; sfxTie(); }
+      else if (BEATS[pick]===cpuPick) { you++; youScoreEl.textContent=you; resultEl.textContent='¡Ganaste la ronda!'; resultEl.className='win'; sfxWin(); }
+      else { cpu++; cpuScoreEl.textContent=cpu; resultEl.textContent='Perdiste la ronda'; resultEl.className='lose'; sfxLose(); }
+      if (you>=5 || cpu>=5) endGame();
+      else picksEl.classList.remove('lock');
+    }, 600);
+  }
+
+  function endGame() {
+    over=true;
+    setTimeout(()=>{
+      if (you>5||you>=5 && you>cpu) {}
+      if (you>cpu) { resultEl.textContent='🏆 ¡GANASTE LA PARTIDA!'; resultEl.className='win'; sfxGame(); wins++; localStorage.setItem('pptWins',String(wins)); }
+      else { resultEl.textContent='🤖 Ganó la máquina'; resultEl.className='lose'; }
+      picksEl.classList.remove('lock');
+      setTimeout(()=>{ you=0;cpu=0;over=false; youScoreEl.textContent='0';cpuScoreEl.textContent='0'; resultEl.textContent='elegí tu jugada'; resultEl.className=''; }, 2400);
+    }, 700);
+  }
+
+  picksEl.querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>{ initAudio(); play(b.dataset.p); }));
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('pptSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('pptSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔢 Encuentra el número</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; --red:#ff5e6c; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(94vw, 420px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(24px, 6.5vw, 32px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .hud { width: 100%; display: flex; justify-content: space-around; }
+  .stat { text-align: center; }
+  .stat .v { font-family: 'Space Mono', monospace; font-size: clamp(24px, 6.5vw, 30px); font-weight: 700; line-height: 1; }
+  .stat .v.gold { color: var(--gold); } .stat .v.green { color: var(--green); }
+  .stat .k { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--mut2); text-transform: uppercase; margin-top: 6px; }
+  .next { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); }
+  .next b { color: var(--gold); font-size: 20px; }
+  #grid { width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(6px, 1.8vw, 9px); }
+  .cell { border-radius: 10px; background: var(--bg2); border: 1px solid var(--line-hi); display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-weight: 700; font-size: clamp(15px, 4.6vw, 22px); cursor: pointer; transition: background .1s, transform .08s, opacity .2s; }
+  .cell:active { transform: scale(0.93); }
+  .cell.done { background: rgba(46,230,160,0.14); border-color: rgba(46,230,160,0.4); color: var(--green); opacity: 0.5; }
+  .cell.bad { background: var(--red); border-color: var(--red); }
+  #grid.lock { pointer-events: none; }
+  #overlay { position: absolute; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(7,7,15,0.86); backdrop-filter: blur(5px); text-align: center; padding: 24px; }
+  #overlay h2 { font-size: 40px; font-weight: 700; color: var(--green); font-family: 'Space Mono', monospace; }
+  #overlay .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); } #overlay .info b { color: var(--gold); }
+  #overlay button { margin-top: 4px; padding: 13px 30px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Encontr<span class="o">á</span> el número</h1>
+    <div class="sub">del 1 al 25, en orden</div>
+  </header>
+  <div class="hud">
+    <div class="stat"><div class="v" id="time">0.0</div><div class="k">segundos</div></div>
+    <div class="next">buscá el <b id="next">1</b></div>
+    <div class="stat"><div class="v gold" id="best">—</div><div class="k">récord</div></div>
+  </div>
+  <div id="grid"></div>
+</div>
+
+<div id="overlay">
+  <h2 id="ovTime">0.0s</h2>
+  <div class="info" id="ovInfo">completaste del 1 al 25</div>
+  <button id="againBtn">jugar de nuevo</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Encontr<span class="o">á</span> el número</h2>
+    <ol>
+      <li>Tocá los números <b>en orden del 1 al 25</b> lo más rápido posible.</li>
+      <li>El cronómetro arranca al tocar el <b>1</b>. Un toque equivocado te penaliza tiempo.</li>
+      <li>Es un ejercicio de <b>atención y vista periférica</b>. ¡Bajá tu récord!</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const N = 25;
+  const gridEl = document.getElementById('grid');
+  const timeEl = document.getElementById('time');
+  const nextEl = document.getElementById('next');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  let order, next, started, t0, rafT, done;
+  let best = parseFloat(localStorage.getItem('schulteBest')||'0')||0;
+  bestEl.textContent = best>0 ? best.toFixed(1)+'s' : '—';
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.04){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0b=actx.currentTime; g.gain.setValueAtTime(v,t0b); g.gain.exponentialRampToValueAtTime(0.001,t0b+d); o.connect(g);g.connect(actx.destination);o.start(t0b);o.stop(t0b+d); }
+  const sfxGood = () => tone(500+next*12,0.05,'triangle',0.03);
+  const sfxBad = () => tone(150,0.16,'sawtooth',0.05);
+  const sfxWin = () => [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+  function newGame() {
+    order = shuffle([...Array(N)].map((_,i)=>i+1));
+    next=1; started=false; done=false; t0=0;
+    timeEl.textContent='0.0'; nextEl.textContent='1';
+    overlay.style.display='none';
+    gridEl.classList.remove('lock');
+    gridEl.innerHTML='';
+    order.forEach(num=>{
+      const c=document.createElement('div'); c.className='cell'; c.textContent=num; c.dataset.n=num;
+      c.addEventListener('click',()=>{ initAudio(); tap(num, c); });
+      gridEl.appendChild(c);
+    });
+  }
+  function tick(){ if(!started||done) return; timeEl.textContent=((performance.now()-t0)/1000).toFixed(1); rafT=requestAnimationFrame(tick); }
+
+  function tap(num, el) {
+    if (done) return;
+    if (!started && num===1) { started=true; t0=performance.now(); tick(); }
+    if (num===next) {
+      el.classList.add('done'); sfxGood();
+      next++; nextEl.textContent = next<=N ? next : '✓';
+      if (next>N) win();
+    } else {
+      el.classList.add('bad'); sfxBad();
+      setTimeout(()=>el.classList.remove('bad'),250);
+      if (started) t0 -= 1000; // 1s penalty
+    }
+  }
+  function win() {
+    done=true; cancelAnimationFrame(rafT);
+    const secs = (performance.now()-t0)/1000;
+    timeEl.textContent = secs.toFixed(1);
+    sfxWin();
+    const record = best===0 || secs<best;
+    if (record) { best=secs; localStorage.setItem('schulteBest',best.toFixed(1)); bestEl.textContent=best.toFixed(1)+'s'; }
+    document.getElementById('ovTime').textContent = secs.toFixed(1)+'s';
+    document.getElementById('ovInfo').innerHTML = record ? 'del 1 al 25 · <b>¡nuevo récord!</b> 🎉' : `del 1 al 25 · récord <b>${best.toFixed(1)}s</b>`;
+    gridEl.classList.add('lock');
+    setTimeout(()=>overlay.style.display='flex', 450);
+  }
+
+  document.getElementById('againBtn').addEventListener('click', ()=>{ initAudio(); newGame(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('schulteSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('schulteSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  newGame();
+</script>
+</body>
+</html>

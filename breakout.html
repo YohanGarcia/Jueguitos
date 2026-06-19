@@ -11,17 +11,18 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 100dvh;
     font-family: 'Segoe UI', system-ui, sans-serif;
     overflow: hidden;
   }
   canvas {
     border-radius: 16px;
     box-shadow: 0 0 60px rgba(255, 122, 62, 0.12);
-    width: 700px;
-    height: 760px;
-    max-width: 98vw;
-    max-height: 94vh;
+    width: auto;
+    height: auto;
+    aspect-ratio: 700 / 760;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
     touch-action: none;
   }
   #ui {

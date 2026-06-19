@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🃏 Memotest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg:#07070f; --bg2:#0d0d1a; --line:rgba(255,255,255,0.09); --line-hi:rgba(255,255,255,0.18); --txt:#f4f4fb; --mut:#8a8aa3; --mut2:#5b5b72; --gold:#ffcb52; --green:#2ee6a0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: radial-gradient(900px 560px at 50% -12%, #14142a 0%, rgba(20,20,42,0) 60%), var(--bg); color: var(--txt); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; }
+  ::selection { background: var(--gold); color: #07070f; }
+  #menuLink { position: absolute; top: 14px; left: 14px; z-index: 6; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--txt); font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s, border-color .15s; }
+  #menuLink:hover { background: rgba(255,255,255,0.14); border-color: var(--line-hi); }
+  #helpBtn { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid var(--line); color: var(--mut); font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+  #helpBtn:hover { background: rgba(255,255,255,0.14); color: var(--txt); border-color: var(--line-hi); }
+  #app { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(94vw, 420px); padding: 16px; }
+  header { text-align: center; }
+  header h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; }
+  header h1 .o { color: var(--gold); }
+  header .sub { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--mut2); text-transform: uppercase; margin-top: 4px; }
+  .hud { width: 100%; display: flex; justify-content: space-around; }
+  .stat { text-align: center; }
+  .stat .v { font-family: 'Space Mono', monospace; font-size: clamp(24px, 6.5vw, 30px); font-weight: 700; line-height: 1; }
+  .stat .v.gold { color: var(--gold); } .stat .v.green { color: var(--green); }
+  .stat .k { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--mut2); text-transform: uppercase; margin-top: 6px; }
+  #grid { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(7px, 2vw, 11px); }
+  .card { aspect-ratio: 1; perspective: 600px; cursor: pointer; }
+  .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .4s; }
+  .card.flip .inner, .card.matched .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; backface-visibility: hidden; font-size: clamp(26px, 9vw, 40px); }
+  .front { background: var(--bg2); border: 1px solid var(--line-hi); }
+  .front::after { content: '?'; color: var(--mut2); font-weight: 700; font-size: clamp(20px,6vw,28px); }
+  .back { background: #181830; border: 1px solid var(--line-hi); transform: rotateY(180deg); }
+  .card.matched .back { background: rgba(46,230,160,0.16); border-color: var(--green); }
+  #grid.lock { pointer-events: none; }
+  #overlay { position: absolute; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(7,7,15,0.86); backdrop-filter: blur(5px); text-align: center; padding: 24px; }
+  #overlay h2 { font-size: 40px; font-weight: 700; color: var(--green); }
+  #overlay .info { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--mut); }
+  #overlay .info b { color: var(--gold); }
+  #overlay button { margin-top: 4px; padding: 13px 30px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform .12s; }
+  #overlay button:active { transform: scale(0.96); }
+  #help { position: absolute; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(7,7,15,0.9); backdrop-filter: blur(6px); }
+  #help .panel { width: min(94vw, 380px); background: var(--bg2); border: 1px solid var(--line-hi); border-radius: 18px; padding: 24px 22px; }
+  #help h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; } #help h2 .o { color: var(--gold); }
+  #help ol { padding-left: 18px; } #help li { font-size: 14px; color: var(--mut); line-height: 1.55; margin-bottom: 9px; } #help li b { color: var(--txt); font-weight: 600; }
+  #help button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 999px; background: var(--gold); color: #07070f; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<a id="menuLink" href="index.html">← menú</a>
+<button id="helpBtn" aria-label="Cómo se juega">?</button>
+
+<div id="app">
+  <header>
+    <h1>Memot<span class="o">e</span>st</h1>
+    <div class="sub">encontrá los pares</div>
+  </header>
+  <div class="hud">
+    <div class="stat"><div class="v green" id="moves">0</div><div class="k">movimientos</div></div>
+    <div class="stat"><div class="v" id="pairs">0/8</div><div class="k">pares</div></div>
+    <div class="stat"><div class="v gold" id="best">—</div><div class="k">récord</div></div>
+  </div>
+  <div id="grid"></div>
+</div>
+
+<div id="overlay">
+  <h2>¡COMPLETO!</h2>
+  <div class="info" id="ovInfo">8 pares en 0 movimientos</div>
+  <button id="againBtn">jugar de nuevo</button>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>Cómo se juega <span class="o">·</span> Memot<span class="o">e</span>st</h2>
+    <ol>
+      <li>Tocá una carta para darla vuelta y <b>memorizá</b> su símbolo.</li>
+      <li>Dá vuelta otra: si <b>coinciden</b>, quedan descubiertas. Si no, se ocultan.</li>
+      <li>Encontrá <b>los 8 pares</b> en la menor cantidad de movimientos posible.</li>
+    </ol>
+    <button id="helpClose">¡a jugar!</button>
+  </div>
+</div>
+
+<script>
+  const SYMBOLS = ['🍒','⚡','🌙','🎲','🔥','💎','🎯','🚀'];
+  const gridEl = document.getElementById('grid');
+  const movesEl = document.getElementById('moves');
+  const pairsEl = document.getElementById('pairs');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  let deck, first, second, moves, matched, lock;
+  let best = parseInt(localStorage.getItem('memotestBest')||'0',10)||0;
+  bestEl.textContent = best>0 ? best : '—';
+
+  let actx;
+  function initAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state==='suspended') actx.resume(); }
+  function tone(f,d,t='sine',v=0.05){ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=t;o.frequency.value=f; const t0=actx.currentTime; g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+d); o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+d); }
+  const sfxFlip = () => tone(420,0.05,'triangle',0.03);
+  const sfxMatch = () => { tone(660,0.1,'square',0.05); setTimeout(()=>tone(880,0.12,'square',0.05),90); };
+  const sfxNo = () => tone(180,0.14,'sawtooth',0.04);
+  const sfxWin = () => [523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'square',0.06),i*100));
+
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+  function newGame() {
+    deck = shuffle([...SYMBOLS, ...SYMBOLS]);
+    first=null; second=null; moves=0; matched=0; lock=false;
+    movesEl.textContent='0'; pairsEl.textContent='0/8';
+    overlay.style.display='none';
+    gridEl.innerHTML='';
+    deck.forEach((sym,i)=>{
+      const card=document.createElement('div'); card.className='card'; card.dataset.i=i;
+      card.innerHTML=`<div class="inner"><div class="face front"></div><div class="face back">${sym}</div></div>`;
+      card.addEventListener('click',()=>{ initAudio(); flip(card,i); });
+      gridEl.appendChild(card);
+    });
+  }
+
+  function flip(card, i) {
+    if (lock || card.classList.contains('flip') || card.classList.contains('matched')) return;
+    card.classList.add('flip'); sfxFlip();
+    if (!first) { first={card,sym:deck[i]}; return; }
+    second={card,sym:deck[i]};
+    moves++; movesEl.textContent=moves;
+    lock=true;
+    if (first.sym===second.sym) {
+      setTimeout(()=>{ first.card.classList.add('matched'); second.card.classList.add('matched'); sfxMatch(); matched++; pairsEl.textContent=matched+'/8'; first=second=null; lock=false; if(matched===8) win(); }, 380);
+    } else {
+      setTimeout(()=>{ first.card.classList.remove('flip'); second.card.classList.remove('flip'); sfxNo(); first=second=null; lock=false; }, 760);
+    }
+  }
+
+  function win() {
+    sfxWin();
+    const record = best===0 || moves<best;
+    if (record) { best=moves; localStorage.setItem('memotestBest',String(best)); bestEl.textContent=best; }
+    document.getElementById('ovInfo').innerHTML = record ? `8 pares en <b>${moves}</b> movimientos · ¡récord! 🎉` : `8 pares en <b>${moves}</b> movimientos · récord ${best}`;
+    setTimeout(()=>overlay.style.display='flex', 500);
+  }
+
+  document.getElementById('againBtn').addEventListener('click', ()=>{ initAudio(); newGame(); });
+  const helpEl = document.getElementById('help');
+  document.getElementById('helpBtn').addEventListener('click', ()=>helpEl.style.display='flex');
+  document.getElementById('helpClose').addEventListener('click', ()=>{ helpEl.style.display='none'; localStorage.setItem('memotestSeenHelp','1'); });
+  helpEl.addEventListener('click', e=>{ if(e.target===helpEl) helpEl.style.display='none'; });
+  if (!localStorage.getItem('memotestSeenHelp')) helpEl.style.display='flex';
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  newGame();
+</script>
+</body>
+</html>
